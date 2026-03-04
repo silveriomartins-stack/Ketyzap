@@ -1,4 +1,4 @@
-// ========== KATYZAP - VERSÃO RAILWAY CORRIGIDA ==========
+// ========== KATYZAP - CHAT EM GRUPO ==========
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -11,32 +11,28 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const usuarios = new Map();
-const mensagensSalvas = {
-    dinho: [
-        { de: 'dinho', para: 'todos', texto: 'E aí, galera! 💪', hora: '10:30' },
-        { de: 'katy', para: 'todos', texto: 'Oiii 💗', hora: '10:31' }
-    ],
-    mara: [
-        { de: 'mara', para: 'todos', texto: 'Bom dia! 🌸', hora: '09:15' },
-        { de: 'dinho', para: 'todos', texto: 'Bom dia, Mara!', hora: '09:16' }
-    ],
-    katy: [
-        { de: 'katy', para: 'todos', texto: 'Prontos pro rolê? 💕', hora: '14:20' },
-        { de: 'mara', para: 'todos', texto: 'Já tô chegando! 🚗', hora: '14:22' }
-    ]
-};
+const usuarios = new Map(); // {socketId: {nome: 'Dinho', contato: 'dinho'}}
+
+// Histórico único do grupo
+let historicoGrupo = [
+    { de: 'dinho', nome: 'Dinho', texto: 'E aí, galera! 💪', hora: '10:30', timestamp: Date.now() - 3600000 },
+    { de: 'katy', nome: 'Katy', texto: 'Oiii 💗', hora: '10:31', timestamp: Date.now() - 3599000 },
+    { de: 'mara', nome: 'Mara', texto: 'Bom dia! 🌸', hora: '09:15', timestamp: Date.now() - 7200000 },
+    { de: 'dinho', nome: 'Dinho', texto: 'Bom dia, Mara!', hora: '09:16', timestamp: Date.now() - 7199000 },
+    { de: 'katy', nome: 'Katy', texto: 'Prontos pro rolê? 💕', hora: '14:20', timestamp: Date.now() - 1800000 },
+    { de: 'mara', nome: 'Mara', texto: 'Já tô chegando! 🚗', hora: '14:22', timestamp: Date.now() - 1798000 }
+].sort((a, b) => a.timestamp - b.timestamp);
 
 app.use(express.json());
 
-// Rota principal - HTML INLINE CORRIGIDO
+// Rota principal
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KatyZap - Chat Rosa 💗</title>
+    <title>KatyZap - Grupo 💗</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         * {
@@ -71,132 +67,90 @@ app.get('/', (req, res) => {
         /* Header */
         .header {
             background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
-            padding: 18px;
+            padding: 15px;
             color: white;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             border-bottom: 2px solid #ffb6c1;
         }
 
         .avatar {
-            width: 48px;
-            height: 48px;
+            width: 45px;
+            height: 45px;
             background: #fff;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
+            font-size: 24px;
             border: 3px solid #fff;
         }
 
         .header h1 {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 600;
-            line-height: 1.2;
         }
 
         .header h1 span {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: normal;
             opacity: 0.9;
             display: block;
         }
 
-        .server-status {
+        .online-count {
             margin-left: auto;
-            font-size: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
         }
 
-        /* Welcome Screen */
-        .welcome-screen {
+        /* Seleção de usuário */
+        .user-selector {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .welcome-screen h2 {
-            font-size: 32px;
-            color: #ff7eb3;
-            margin-bottom: 10px;
-        }
-
-        .welcome-screen p {
-            color: #666;
-            margin-bottom: 25px;
-            font-size: 16px;
-        }
-
-        .btn-escolher {
-            background: #ff7eb3;
-            color: white;
-            border: none;
-            padding: 14px 30px;
-            border-radius: 40px;
-            margin: 8px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 2px solid white;
-            width: 200px;
-            box-shadow: 0 5px 15px rgba(255,126,179,0.4);
-            transition: all 0.3s;
-        }
-
-        .btn-escolher:hover {
-            transform: scale(1.05);
-            background: #ff6ba3;
-        }
-
-        /* Contatos */
-        .contatos {
-            display: flex;
-            padding: 15px;
-            gap: 10px;
+            padding: 12px;
+            gap: 8px;
             background: #ffe4ec;
-            overflow-x: auto;
             border-bottom: 2px solid #ffb6c1;
+            justify-content: center;
         }
 
-        .contato-card {
+        .user-btn {
             background: white;
-            padding: 12px 18px;
+            border: 2px solid #ffb6c1;
+            padding: 10px 20px;
             border-radius: 30px;
             display: flex;
             align-items: center;
             gap: 8px;
-            border: 2px solid #ffb6c1;
-            min-width: 110px;
-            justify-content: center;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: #444;
+            flex: 1;
+            justify-content: center;
+            max-width: 110px;
         }
 
-        .contato-card.ativo {
+        .user-btn.ativo {
             background: #ff7eb3;
             color: white;
             border-color: #ff4d7a;
+            transform: scale(1.02);
         }
 
-        .online-badge {
-            width: 10px;
-            height: 10px;
+        .user-btn .online-indicator {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #9e9e9e;
-            display: inline-block;
         }
 
-        .online-badge.online {
-            background: #4caf50;
-            box-shadow: 0 0 5px #4caf50;
+        .user-btn.ativo .online-indicator {
+            background: white;
         }
 
         /* Chat Area */
@@ -217,13 +171,13 @@ app.get('/', (req, res) => {
             border-bottom: 2px solid #ff99aa;
         }
 
-        .contato-info {
+        .grupo-info {
             display: flex;
             flex-direction: column;
         }
 
-        .contato-nome {
-            font-size: 18px;
+        .grupo-nome {
+            font-size: 16px;
             font-weight: bold;
             color: #4a2c5f;
             display: flex;
@@ -231,9 +185,9 @@ app.get('/', (req, res) => {
             gap: 8px;
         }
 
-        .status-text {
-            font-size: 12px;
-            transition: color 0.3s;
+        .participantes {
+            font-size: 11px;
+            color: #663399;
         }
 
         .digitando {
@@ -241,7 +195,6 @@ app.get('/', (req, res) => {
             color: #666;
             font-style: italic;
             height: 18px;
-            margin-top: 2px;
         }
 
         .mensagens {
@@ -250,21 +203,19 @@ app.get('/', (req, res) => {
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
             background: #fff5f9;
         }
 
         .mensagem {
-            max-width: 80%;
-            padding: 10px 14px;
+            max-width: 85%;
+            padding: 8px 12px;
             border-radius: 18px;
             position: relative;
             animation: fadeIn 0.3s ease;
             word-break: break-word;
-            font-size: 15px;
+            font-size: 14px;
             line-height: 1.4;
-            letter-spacing: normal;
-            white-space: normal;
         }
 
         @keyframes fadeIn {
@@ -272,35 +223,48 @@ app.get('/', (req, res) => {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .mensagem.recebida {
+        .mensagem.outra {
             background: white;
             border: 2px solid #ffb6c1;
             align-self: flex-start;
             border-bottom-left-radius: 4px;
-            color: #333;
         }
 
-        .mensagem.enviada {
+        .mensagem.minha {
             background: #ff7eb3;
             color: white;
             align-self: flex-end;
             border-bottom-right-radius: 4px;
         }
 
+        .mensagem .remetente {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #ff4d7a;
+        }
+
+        .mensagem.minha .remetente {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .mensagem .texto {
+            margin-bottom: 4px;
+        }
+
         .mensagem .footer {
             display: flex;
             justify-content: flex-end;
             gap: 5px;
-            margin-top: 5px;
-            font-size: 10px;
+            font-size: 9px;
             opacity: 0.7;
         }
 
-        .mensagem.recebida .footer {
+        .mensagem.outra .footer {
             color: #666;
         }
 
-        .mensagem.enviada .footer {
+        .mensagem.minha .footer {
             color: rgba(255,255,255,0.8);
         }
 
@@ -319,9 +283,15 @@ app.get('/', (req, res) => {
             border: 2px solid #ffb6c1;
             border-radius: 30px;
             outline: none;
-            font-size: 15px;
+            font-size: 14px;
             background: white;
             color: #333;
+        }
+
+        .input-area input:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
 
         .input-area input::placeholder {
@@ -339,7 +309,7 @@ app.get('/', (req, res) => {
             height: 48px;
             border-radius: 50%;
             color: white;
-            font-size: 22px;
+            font-size: 20px;
             cursor: pointer;
             transition: all 0.3s;
             display: flex;
@@ -347,7 +317,12 @@ app.get('/', (req, res) => {
             justify-content: center;
         }
 
-        .btn-enviar:active {
+        .btn-enviar:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-enviar:active:not(:disabled) {
             transform: scale(0.95);
         }
 
@@ -358,13 +333,12 @@ app.get('/', (req, res) => {
             transform: translateX(-50%);
             background: #ff7eb3;
             color: white;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 40px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
             z-index: 1000;
             animation: slideDown 0.3s ease;
-            font-size: 15px;
-            font-weight: 500;
+            font-size: 14px;
             border: 2px solid white;
         }
 
@@ -373,9 +347,8 @@ app.get('/', (req, res) => {
             to { top: 20px; }
         }
 
-        /* Scrollbar */
         .mensagens::-webkit-scrollbar {
-            width: 5px;
+            width: 4px;
         }
 
         .mensagens::-webkit-scrollbar-track {
@@ -384,66 +357,54 @@ app.get('/', (req, res) => {
 
         .mensagens::-webkit-scrollbar-thumb {
             background: #ffb6c1;
-            border-radius: 5px;
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
-    <div class="container" id="app">
+    <div class="container">
         <!-- Header -->
         <div class="header">
             <div class="avatar">💗</div>
-            <h1>KatyZap<br><span>by Katy</span></h1>
-            <div class="server-status" id="serverStatus">🟢</div>
+            <h1>KatyZap<br><span>Grupo das Amigas</span></h1>
+            <div class="online-count" id="onlineCount">3 online</div>
         </div>
 
-        <!-- Tela de escolha -->
-        <div id="welcomeScreen" class="welcome-screen">
-            <h2>💗 Bem-vinda!</h2>
-            <p>Escolha seu nome:</p>
-            <button class="btn-escolher" onclick="escolherNome('Dinho')">👨 Dinho</button>
-            <button class="btn-escolher" onclick="escolherNome('Mara')">👩 Mara</button>
-            <button class="btn-escolher" onclick="escolherNome('Katy')">👸 Katy</button>
+        <!-- Seleção de usuário (quem você é) -->
+        <div class="user-selector" id="userSelector">
+            <div class="user-btn" data-user="dinho" onclick="selecionarUsuario('dinho')">
+                <span class="online-indicator" id="status-dinho"></span>
+                <span>👨 Dinho</span>
+            </div>
+            <div class="user-btn" data-user="mara" onclick="selecionarUsuario('mara')">
+                <span class="online-indicator" id="status-mara"></span>
+                <span>👩 Mara</span>
+            </div>
+            <div class="user-btn" data-user="katy" onclick="selecionarUsuario('katy')">
+                <span class="online-indicator" id="status-katy"></span>
+                <span>👸 Katy</span>
+            </div>
         </div>
 
-        <!-- Chat Container -->
-        <div id="chatContainer" style="display: none; height: 100%; flex-direction: column;">
-            <!-- Contatos -->
-            <div class="contatos" id="contatos">
-                <div class="contato-card" data-contato="dinho" data-nome="Dinho">
-                    <span class="online-badge" id="status-dinho"></span>
-                    <span>👨 Dinho</span>
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="grupo-info">
+                    <div class="grupo-nome">
+                        <span>💬 Grupo KatyZap</span>
+                    </div>
+                    <div class="participantes" id="participantesText">Dinho, Mara, Katy</div>
                 </div>
-                <div class="contato-card" data-contato="mara" data-nome="Mara">
-                    <span class="online-badge" id="status-mara"></span>
-                    <span>👩 Mara</span>
-                </div>
-                <div class="contato-card" data-contato="katy" data-nome="Katy">
-                    <span class="online-badge" id="status-katy"></span>
-                    <span>👸 Katy</span>
-                </div>
+                <div class="digitando" id="digitando"></div>
             </div>
 
-            <!-- Chat Area -->
-            <div class="chat-area">
-                <div class="chat-header">
-                    <div class="contato-info">
-                        <div class="contato-nome">
-                            <span id="contatoAtual">Dinho</span>
-                            <span class="status-text" id="statusTexto">● online</span>
-                        </div>
-                        <div class="digitando" id="digitando"></div>
-                    </div>
-                </div>
+            <!-- Mensagens -->
+            <div class="mensagens" id="mensagens"></div>
 
-                <!-- Mensagens -->
-                <div class="mensagens" id="mensagens"></div>
-
-                <!-- Input -->
-                <div class="input-area">
-                    <input type="text" id="mensagemInput" placeholder="Digite sua mensagem... 💗" autocomplete="off">
-                    <button class="btn-enviar" id="btnEnviar">➤</button>
-                </div>
+            <!-- Input (só aparece depois de escolher quem é) -->
+            <div class="input-area">
+                <input type="text" id="mensagemInput" placeholder="Escolha seu nome acima para conversar..." disabled>
+                <button class="btn-enviar" id="btnEnviar" disabled>➤</button>
             </div>
         </div>
     </div>
@@ -453,21 +414,24 @@ app.get('/', (req, res) => {
         const socket = io();
         let meuNome = '';
         let meuContato = '';
-        let contatoAtual = 'dinho';
         let usuariosOnline = new Map();
         
         // Elementos
-        const welcomeScreen = document.getElementById('welcomeScreen');
-        const chatContainer = document.getElementById('chatContainer');
         const mensagensDiv = document.getElementById('mensagens');
         const mensagemInput = document.getElementById('mensagemInput');
         const btnEnviar = document.getElementById('btnEnviar');
-        const contatoAtualSpan = document.getElementById('contatoAtual');
-        const statusTexto = document.getElementById('statusTexto');
         const digitandoSpan = document.getElementById('digitando');
-        const serverStatus = document.getElementById('serverStatus');
+        const onlineCount = document.getElementById('onlineCount');
+        const participantesText = document.getElementById('participantesText');
         
-        // Mapeamento
+        // Cores para cada usuário
+        const cores = {
+            dinho: '#FF6B6B',
+            mara: '#4ECDC4',
+            katy: '#FFB347'
+        };
+
+        // Nomes formatados
         const nomes = {
             dinho: 'Dinho',
             mara: 'Mara',
@@ -475,25 +439,44 @@ app.get('/', (req, res) => {
         };
 
         // ========== FUNÇÕES ==========
-        function escolherNome(nome) {
-            meuNome = nome;
-            meuContato = nome.toLowerCase();
-            
-            // Esconder welcome, mostrar chat
-            welcomeScreen.style.display = 'none';
-            chatContainer.style.display = 'flex';
-            
-            // Entrar no chat
-            socket.emit('entrar', {
-                nome: meuNome,
-                contato: meuContato
-            });
-            
-            // Configurar eventos
-            setupEventListeners();
-            selecionarContato('dinho');
-            
-            console.log(\`✅ Conectado como \${meuNome}\`);
+        function selecionarUsuario(contato) {
+            if (!meuContato) {
+                meuContato = contato;
+                meuNome = nomes[contato];
+                
+                // Atualizar UI dos botões
+                document.querySelectorAll('.user-btn').forEach(btn => {
+                    btn.classList.remove('ativo');
+                    if (btn.dataset.user === contato) {
+                        btn.classList.add('ativo');
+                    }
+                });
+
+                // Habilitar input
+                mensagemInput.disabled = false;
+                btnEnviar.disabled = false;
+                mensagemInput.placeholder = \`Digite como \${meuNome}... 💗\`;
+                
+                // Entrar no chat
+                socket.emit('entrar', {
+                    nome: meuNome,
+                    contato: meuContato
+                });
+
+                // Carregar histórico
+                fetch('/api/historico')
+                    .then(res => res.json())
+                    .then(historico => {
+                        mensagensDiv.innerHTML = '';
+                        historico.forEach(msg => {
+                            adicionarMensagem(msg);
+                        });
+                    });
+
+                setupEventListeners();
+                
+                notificar(\`💗 Você entrou como \${meuNome}\`);
+            }
         }
 
         function setupEventListeners() {
@@ -504,81 +487,60 @@ app.get('/', (req, res) => {
             });
 
             mensagemInput.addEventListener('input', () => {
-                socket.emit('digitando', { contato: contatoAtual });
-            });
-
-            document.querySelectorAll('.contato-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    selecionarContato(card.dataset.contato);
-                });
+                socket.emit('digitando', { nome: meuNome });
             });
         }
 
         // Socket events
-        socket.on('historico', (historico) => {
+        socket.on('historico_grupo', (historico) => {
             mensagensDiv.innerHTML = '';
             historico.forEach(msg => {
-                adicionarMensagem(msg, msg.de === meuContato ? 'enviada' : 'recebida');
+                adicionarMensagem(msg);
             });
         });
 
-        socket.on('nova_mensagem', (msg) => {
-            const tipo = msg.de === meuContato ? 'enviada' : 'recebida';
-            adicionarMensagem(msg, tipo);
+        socket.on('nova_mensagem_grupo', (msg) => {
+            adicionarMensagem(msg);
             
-            if (msg.de !== meuContato && msg.de === contatoAtual) {
-                notificar(\`💗 \${nomes[msg.de]}: \${msg.texto}\`);
+            if (msg.de !== meuContato) {
+                notificar(\`💬 \${msg.nome}: \${msg.texto}\`);
             }
         });
 
         socket.on('usuario_online', (usuario) => {
             usuariosOnline.set(usuario.contato, usuario);
             atualizarStatus(usuario.contato, true);
-            notificar(\`✨ \${usuario.nome} entrou\`);
+            atualizarContagemOnline();
+            notificar(\`✨ \${usuario.nome} entrou no grupo\`);
         });
 
         socket.on('usuario_offline', (usuario) => {
             usuariosOnline.delete(usuario.contato);
             atualizarStatus(usuario.contato, false);
+            atualizarContagemOnline();
         });
 
         socket.on('alguem_digitando', (dados) => {
-            if (dados.contato === contatoAtual) {
-                digitandoSpan.textContent = \`\${nomes[dados.contato]} digitando...\`;
+            if (dados.nome !== meuNome) {
+                digitandoSpan.textContent = \`\${dados.nome} está digitando...\`;
                 setTimeout(() => { digitandoSpan.textContent = ''; }, 3000);
             }
         });
 
-        function selecionarContato(contato) {
-            contatoAtual = contato;
-            
-            document.querySelectorAll('.contato-card').forEach(c => {
-                c.classList.remove('ativo');
-                if (c.dataset.contato === contato) c.classList.add('ativo');
-            });
-
-            contatoAtualSpan.textContent = nomes[contato];
-            atualizarStatus(contato, usuariosOnline.has(contato));
-            
-            fetch(\`/api/mensagens/\${contato}\`)
-                .then(res => res.json())
-                .then(msgs => {
-                    mensagensDiv.innerHTML = '';
-                    msgs.forEach(msg => {
-                        adicionarMensagem(msg, msg.de === meuContato ? 'enviada' : 'recebida');
-                    });
-                });
-        }
-
         function enviarMensagem() {
+            if (!meuContato) {
+                alert('Escolha seu nome primeiro!');
+                return;
+            }
+
             const texto = mensagemInput.value.trim();
             if (!texto) return;
 
             const hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
-            socket.emit('mensagem', {
+            socket.emit('mensagem_grupo', {
                 de: meuContato,
-                para: contatoAtual,
+                nome: meuNome,
                 texto: texto,
                 hora: hora
             });
@@ -586,17 +548,32 @@ app.get('/', (req, res) => {
             mensagemInput.value = '';
         }
 
-        function adicionarMensagem(msg, tipo) {
+        function adicionarMensagem(msg) {
             const div = document.createElement('div');
-            div.className = \`mensagem \${tipo}\`;
-            div.textContent = msg.texto; // Usar textContent em vez de innerHTML para evitar problemas de formatação
+            div.className = \`mensagem \${msg.de === meuContato ? 'minha' : 'outra'}\`;
             
+            // Remetente (se não for minha mensagem)
+            if (msg.de !== meuContato) {
+                const remetente = document.createElement('div');
+                remetente.className = 'remetente';
+                remetente.textContent = msg.nome;
+                remetente.style.color = cores[msg.de] || '#ff4d7a';
+                div.appendChild(remetente);
+            }
+            
+            // Texto da mensagem
+            const texto = document.createElement('div');
+            texto.className = 'texto';
+            texto.textContent = msg.texto;
+            div.appendChild(texto);
+            
+            // Footer com hora
             const footer = document.createElement('div');
             footer.className = 'footer';
             footer.textContent = msg.hora || '';
             if (msg.automatica) footer.textContent += ' 🤖';
-            
             div.appendChild(footer);
+            
             mensagensDiv.appendChild(div);
             mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
         }
@@ -604,13 +581,18 @@ app.get('/', (req, res) => {
         function atualizarStatus(contato, online) {
             const badge = document.getElementById(\`status-\${contato}\`);
             if (badge) {
-                badge.className = online ? 'online-badge online' : 'online-badge';
+                badge.style.background = online ? '#4caf50' : '#9e9e9e';
             }
+        }
+
+        function atualizarContagemOnline() {
+            const count = usuariosOnline.size;
+            onlineCount.textContent = \`\${count} online\`;
             
-            if (contato === contatoAtual) {
-                statusTexto.textContent = online ? '● online' : '○ offline';
-                statusTexto.style.color = online ? '#4caf50' : '#9e9e9e';
-            }
+            const nomesOnline = Array.from(usuariosOnline.values())
+                .map(u => u.nome)
+                .join(', ');
+            participantesText.textContent = nomesOnline || 'Ninguém online';
         }
 
         function notificar(texto) {
@@ -625,8 +607,7 @@ app.get('/', (req, res) => {
         setInterval(() => {
             fetch('/api/status')
                 .then(res => res.json())
-                .then(() => { serverStatus.textContent = '🟢'; })
-                .catch(() => { serverStatus.textContent = '🔴'; });
+                .catch(() => {});
         }, 5000);
     </script>
 </body>
@@ -637,16 +618,14 @@ app.get('/', (req, res) => {
 app.get('/api/status', (req, res) => {
     res.json({
         nome: 'KatyZap',
-        versao: '2.0.0',
         usuariosOnline: usuarios.size,
-        timestamp: new Date().toISOString()
+        online: Array.from(usuarios.values()).map(u => u.nome)
     });
 });
 
-// API Mensagens
-app.get('/api/mensagens/:contato', (req, res) => {
-    const contato = req.params.contato;
-    res.json(mensagensSalvas[contato] || []);
+// API Histórico do grupo
+app.get('/api/historico', (req, res) => {
+    res.json(historicoGrupo);
 });
 
 // Socket.IO
@@ -657,58 +636,54 @@ io.on('connection', (socket) => {
         const { nome, contato } = dados;
         usuarios.set(socket.id, { nome, contato, socketId: socket.id });
         
+        // Enviar histórico para o novo usuário
+        socket.emit('historico_grupo', historicoGrupo);
+        
+        // Avisar todos que novo usuário entrou
         io.emit('usuario_online', {
             socketId: socket.id,
             nome: nome,
             contato: contato
         });
-
-        socket.emit('historico', mensagensSalvas[contato] || []);
         
-        console.log(`👤 ${nome} entrou como ${contato}`);
+        console.log(`👤 ${nome} entrou no grupo`);
     });
 
-    socket.on('mensagem', (dados) => {
-        const { de, para, texto, hora } = dados;
+    socket.on('mensagem_grupo', (dados) => {
+        const { de, nome, texto, hora } = dados;
         
         const novaMensagem = {
             de: de,
-            para: para,
+            nome: nome,
             texto: texto,
             hora: hora,
             timestamp: Date.now()
         };
         
-        if (mensagensSalvas[para]) {
-            mensagensSalvas[para].push(novaMensagem);
-            if (mensagensSalvas[para].length > 50) mensagensSalvas[para].shift();
-        }
+        // Salvar no histórico
+        historicoGrupo.push(novaMensagem);
+        if (historicoGrupo.length > 100) historicoGrupo.shift();
+        
+        // Enviar para todos
+        io.emit('nova_mensagem_grupo', novaMensagem);
 
-        io.emit('nova_mensagem', novaMensagem);
-
-        // Resposta automática (30% chance)
-        if (Math.random() < 0.3) {
+        // Resposta automática (10% chance)
+        if (Math.random() < 0.1) {
             setTimeout(() => {
                 const respostas = [
-                    'Que legal! 💕', 'Entendi! 😊', 'Haha 😄', 
-                    'Sério? Que massa!', 'Também acho! 💗', 'Tô online!'
+                    { de: 'katy', nome: 'Katy', texto: 'Que fofo! 💗' },
+                    { de: 'mara', nome: 'Mara', texto: 'Concordo! 🌸' },
+                    { de: 'dinho', nome: 'Dinho', texto: 'Haha legal! 😄' }
                 ];
                 
-                const resposta = {
-                    de: para,
-                    para: de,
-                    texto: respostas[Math.floor(Math.random() * respostas.length)],
-                    hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    timestamp: Date.now(),
-                    automatica: true
-                };
+                const resposta = respostas[Math.floor(Math.random() * respostas.length)];
+                resposta.hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                resposta.timestamp = Date.now();
+                resposta.automatica = true;
                 
-                if (mensagensSalvas[de]) {
-                    mensagensSalvas[de].push(resposta);
-                }
-                
-                io.emit('nova_mensagem', resposta);
-            }, 2000);
+                historicoGrupo.push(resposta);
+                io.emit('nova_mensagem_grupo', resposta);
+            }, 3000);
         }
     });
 
@@ -721,16 +696,16 @@ io.on('connection', (socket) => {
         if (usuario) {
             io.emit('usuario_offline', usuario);
             usuarios.delete(socket.id);
-            console.log(`💔 ${usuario.nome} saiu`);
+            console.log(`💔 ${usuario.nome} saiu do grupo`);
         }
     });
 });
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(50));
-    console.log('💗 KATYZAP - CORRIGIDO! 💗');
+    console.log('💗 KATYZAP - GRUPO ÚNICO 💗');
     console.log('='.repeat(50));
     console.log(`📱 Porta: ${PORT}`);
-    console.log(`💕 Contatos: Dinho, Mara, Katy`);
+    console.log(`👥 Chat em grupo com Dinho, Mara e Katy`);
     console.log('='.repeat(50) + '\n');
 });
