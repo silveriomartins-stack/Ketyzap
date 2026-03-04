@@ -1,4 +1,4 @@
-// ========== KATYZAP - CHAT EM GRUPO ==========
+// ========== KATYZAP - CHAT EM GRUPO (VERSÃO LIMPA) ==========
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -13,15 +13,8 @@ const io = socketIo(server, {
 const PORT = process.env.PORT || 3000;
 const usuarios = new Map(); // {socketId: {nome: 'Dinho', contato: 'dinho'}}
 
-// Histórico único do grupo
-let historicoGrupo = [
-    { de: 'dinho', nome: 'Dinho', texto: 'E aí, galera! 💪', hora: '10:30', timestamp: Date.now() - 3600000 },
-    { de: 'katy', nome: 'Katy', texto: 'Oiii 💗', hora: '10:31', timestamp: Date.now() - 3599000 },
-    { de: 'mara', nome: 'Mara', texto: 'Bom dia! 🌸', hora: '09:15', timestamp: Date.now() - 7200000 },
-    { de: 'dinho', nome: 'Dinho', texto: 'Bom dia, Mara!', hora: '09:16', timestamp: Date.now() - 7199000 },
-    { de: 'katy', nome: 'Katy', texto: 'Prontos pro rolê? 💕', hora: '14:20', timestamp: Date.now() - 1800000 },
-    { de: 'mara', nome: 'Mara', texto: 'Já tô chegando! 🚗', hora: '14:22', timestamp: Date.now() - 1798000 }
-].sort((a, b) => a.timestamp - b.timestamp);
+// Histórico do grupo - COMEÇA VAZIO!
+let historicoGrupo = [];
 
 app.use(express.json());
 
@@ -62,6 +55,7 @@ app.get('/', (req, res) => {
             display: flex;
             flex-direction: column;
             border: 3px solid #ffb6c1;
+            position: relative;
         }
 
         /* Header */
@@ -107,6 +101,28 @@ app.get('/', (req, res) => {
             font-size: 12px;
         }
 
+        /* Botão Limpar */
+        .btn-limpar {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn-limpar:hover {
+            background: rgba(255,255,255,0.5);
+            transform: scale(1.1);
+        }
+
         /* Seleção de usuário */
         .user-selector {
             display: flex;
@@ -120,19 +136,19 @@ app.get('/', (req, res) => {
         .user-btn {
             background: white;
             border: 2px solid #ffb6c1;
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 30px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             color: #444;
             flex: 1;
             justify-content: center;
-            max-width: 110px;
+            max-width: 100px;
         }
 
         .user-btn.ativo {
@@ -147,6 +163,7 @@ app.get('/', (req, res) => {
             height: 8px;
             border-radius: 50%;
             background: #9e9e9e;
+            transition: background 0.3s;
         }
 
         .user-btn.ativo .online-indicator {
@@ -164,7 +181,7 @@ app.get('/', (req, res) => {
 
         .chat-header {
             background: #ffb6c1;
-            padding: 12px 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -177,7 +194,7 @@ app.get('/', (req, res) => {
         }
 
         .grupo-nome {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             color: #4a2c5f;
             display: flex;
@@ -186,15 +203,16 @@ app.get('/', (req, res) => {
         }
 
         .participantes {
-            font-size: 11px;
+            font-size: 10px;
             color: #663399;
         }
 
         .digitando {
-            font-size: 12px;
+            font-size: 11px;
             color: #666;
             font-style: italic;
-            height: 18px;
+            height: 16px;
+            text-align: right;
         }
 
         .mensagens {
@@ -238,9 +256,9 @@ app.get('/', (req, res) => {
         }
 
         .mensagem .remetente {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             color: #ff4d7a;
         }
 
@@ -249,7 +267,7 @@ app.get('/', (req, res) => {
         }
 
         .mensagem .texto {
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .mensagem .footer {
@@ -258,14 +276,6 @@ app.get('/', (req, res) => {
             gap: 5px;
             font-size: 9px;
             opacity: 0.7;
-        }
-
-        .mensagem.outra .footer {
-            color: #666;
-        }
-
-        .mensagem.minha .footer {
-            color: rgba(255,255,255,0.8);
         }
 
         /* Input Area */
@@ -326,6 +336,90 @@ app.get('/', (req, res) => {
             transform: scale(0.95);
         }
 
+        /* Modal de confirmação */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.ativo {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 30px;
+            padding: 25px;
+            width: 280px;
+            text-align: center;
+            border: 3px solid #ffb6c1;
+            transform: scale(0.8);
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.ativo .modal {
+            transform: scale(1);
+        }
+
+        .modal h3 {
+            color: #ff7eb3;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .modal p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .modal-botoes {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn.confirmar {
+            background: #ff7eb3;
+            color: white;
+        }
+
+        .modal-btn.cancelar {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .modal-btn.confirmar:hover {
+            background: #ff6ba3;
+            transform: scale(1.05);
+        }
+
+        .modal-btn.cancelar:hover {
+            background: #e0e0e0;
+        }
+
         .notificacao {
             position: fixed;
             top: 20px;
@@ -359,6 +453,13 @@ app.get('/', (req, res) => {
             background: #ffb6c1;
             border-radius: 4px;
         }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -367,10 +468,11 @@ app.get('/', (req, res) => {
         <div class="header">
             <div class="avatar">💗</div>
             <h1>KatyZap<br><span>Grupo das Amigas</span></h1>
-            <div class="online-count" id="onlineCount">3 online</div>
+            <div class="online-count" id="onlineCount">0 online</div>
+            <button class="btn-limpar" onclick="abrirModalLimpar()" title="Limpar todas as mensagens">🗑️</button>
         </div>
 
-        <!-- Seleção de usuário (quem você é) -->
+        <!-- Seleção de usuário -->
         <div class="user-selector" id="userSelector">
             <div class="user-btn" data-user="dinho" onclick="selecionarUsuario('dinho')">
                 <span class="online-indicator" id="status-dinho"></span>
@@ -393,18 +495,35 @@ app.get('/', (req, res) => {
                     <div class="grupo-nome">
                         <span>💬 Grupo KatyZap</span>
                     </div>
-                    <div class="participantes" id="participantesText">Dinho, Mara, Katy</div>
+                    <div class="participantes" id="participantesText">Ninguém online</div>
                 </div>
                 <div class="digitando" id="digitando"></div>
             </div>
 
             <!-- Mensagens -->
-            <div class="mensagens" id="mensagens"></div>
+            <div class="mensagens" id="mensagens">
+                <div class="empty-state" id="emptyState">
+                    💗 Nenhuma mensagem ainda<br>
+                    Seja a primeira a conversar!
+                </div>
+            </div>
 
-            <!-- Input (só aparece depois de escolher quem é) -->
+            <!-- Input -->
             <div class="input-area">
                 <input type="text" id="mensagemInput" placeholder="Escolha seu nome acima para conversar..." disabled>
                 <button class="btn-enviar" id="btnEnviar" disabled>➤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação para limpar mensagens -->
+    <div class="modal-overlay" id="modalLimpar">
+        <div class="modal">
+            <h3>🗑️ Limpar conversa</h3>
+            <p>Tem certeza que deseja apagar todas as mensagens do grupo?</p>
+            <div class="modal-botoes">
+                <button class="modal-btn cancelar" onclick="fecharModalLimpar()">Cancelar</button>
+                <button class="modal-btn confirmar" onclick="limparMensagens()">Limpar</button>
             </div>
         </div>
     </div>
@@ -418,11 +537,13 @@ app.get('/', (req, res) => {
         
         // Elementos
         const mensagensDiv = document.getElementById('mensagens');
+        const emptyState = document.getElementById('emptyState');
         const mensagemInput = document.getElementById('mensagemInput');
         const btnEnviar = document.getElementById('btnEnviar');
         const digitandoSpan = document.getElementById('digitando');
         const onlineCount = document.getElementById('onlineCount');
         const participantesText = document.getElementById('participantesText');
+        const modalLimpar = document.getElementById('modalLimpar');
         
         // Cores para cada usuário
         const cores = {
@@ -456,6 +577,7 @@ app.get('/', (req, res) => {
                 mensagemInput.disabled = false;
                 btnEnviar.disabled = false;
                 mensagemInput.placeholder = \`Digite como \${meuNome}... 💗\`;
+                mensagemInput.focus();
                 
                 // Entrar no chat
                 socket.emit('entrar', {
@@ -468,9 +590,13 @@ app.get('/', (req, res) => {
                     .then(res => res.json())
                     .then(historico => {
                         mensagensDiv.innerHTML = '';
-                        historico.forEach(msg => {
-                            adicionarMensagem(msg);
-                        });
+                        if (historico.length === 0) {
+                            mensagensDiv.appendChild(emptyState);
+                        } else {
+                            historico.forEach(msg => {
+                                adicionarMensagem(msg);
+                            });
+                        }
                     });
 
                 setupEventListeners();
@@ -491,20 +617,53 @@ app.get('/', (req, res) => {
             });
         }
 
+        // Modal functions
+        function abrirModalLimpar() {
+            modalLimpar.classList.add('ativo');
+        }
+
+        function fecharModalLimpar() {
+            modalLimpar.classList.remove('ativo');
+        }
+
+        function limparMensagens() {
+            fetch('/api/limpar', { method: 'POST' })
+                .then(res => res.json())
+                .then(() => {
+                    mensagensDiv.innerHTML = '';
+                    mensagensDiv.appendChild(emptyState);
+                    notificar('✨ Todas as mensagens foram limpas!');
+                    fecharModalLimpar();
+                });
+        }
+
         // Socket events
         socket.on('historico_grupo', (historico) => {
             mensagensDiv.innerHTML = '';
-            historico.forEach(msg => {
-                adicionarMensagem(msg);
-            });
+            if (historico.length === 0) {
+                mensagensDiv.appendChild(emptyState);
+            } else {
+                historico.forEach(msg => {
+                    adicionarMensagem(msg);
+                });
+            }
         });
 
         socket.on('nova_mensagem_grupo', (msg) => {
+            if (mensagensDiv.contains(emptyState)) {
+                mensagensDiv.innerHTML = '';
+            }
             adicionarMensagem(msg);
             
             if (msg.de !== meuContato) {
                 notificar(\`💬 \${msg.nome}: \${msg.texto}\`);
             }
+        });
+
+        socket.on('mensagens_limpas', () => {
+            mensagensDiv.innerHTML = '';
+            mensagensDiv.appendChild(emptyState);
+            notificar('🧹 Chat foi limpo por alguém');
         });
 
         socket.on('usuario_online', (usuario) => {
@@ -589,10 +748,14 @@ app.get('/', (req, res) => {
             const count = usuariosOnline.size;
             onlineCount.textContent = \`\${count} online\`;
             
-            const nomesOnline = Array.from(usuariosOnline.values())
-                .map(u => u.nome)
-                .join(', ');
-            participantesText.textContent = nomesOnline || 'Ninguém online';
+            if (count === 0) {
+                participantesText.textContent = 'Ninguém online';
+            } else {
+                const nomesOnline = Array.from(usuariosOnline.values())
+                    .map(u => u.nome)
+                    .join(', ');
+                participantesText.textContent = nomesOnline;
+            }
         }
 
         function notificar(texto) {
@@ -603,12 +766,11 @@ app.get('/', (req, res) => {
             setTimeout(() => notif.remove(), 3000);
         }
 
-        // Status do servidor
-        setInterval(() => {
-            fetch('/api/status')
-                .then(res => res.json())
-                .catch(() => {});
-        }, 5000);
+        // Tornar funções globais para o onclick
+        window.selecionarUsuario = selecionarUsuario;
+        window.abrirModalLimpar = abrirModalLimpar;
+        window.fecharModalLimpar = fecharModalLimpar;
+        window.limparMensagens = limparMensagens;
     </script>
 </body>
 </html>`);
@@ -623,9 +785,16 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// API Histórico do grupo
+// API Histórico
 app.get('/api/historico', (req, res) => {
     res.json(historicoGrupo);
+});
+
+// API Limpar mensagens
+app.post('/api/limpar', (req, res) => {
+    historicoGrupo = [];
+    io.emit('mensagens_limpas');
+    res.json({ success: true, message: 'Histórico limpo!' });
 });
 
 // Socket.IO
@@ -662,29 +831,10 @@ io.on('connection', (socket) => {
         
         // Salvar no histórico
         historicoGrupo.push(novaMensagem);
-        if (historicoGrupo.length > 100) historicoGrupo.shift();
+        if (historicoGrupo.length > 200) historicoGrupo.shift(); // Limite de 200 mensagens
         
         // Enviar para todos
         io.emit('nova_mensagem_grupo', novaMensagem);
-
-        // Resposta automática (10% chance)
-        if (Math.random() < 0.1) {
-            setTimeout(() => {
-                const respostas = [
-                    { de: 'katy', nome: 'Katy', texto: 'Que fofo! 💗' },
-                    { de: 'mara', nome: 'Mara', texto: 'Concordo! 🌸' },
-                    { de: 'dinho', nome: 'Dinho', texto: 'Haha legal! 😄' }
-                ];
-                
-                const resposta = respostas[Math.floor(Math.random() * respostas.length)];
-                resposta.hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                resposta.timestamp = Date.now();
-                resposta.automatica = true;
-                
-                historicoGrupo.push(resposta);
-                io.emit('nova_mensagem_grupo', resposta);
-            }, 3000);
-        }
     });
 
     socket.on('digitando', (dados) => {
@@ -703,9 +853,10 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(50));
-    console.log('💗 KATYZAP - GRUPO ÚNICO 💗');
+    console.log('💗 KATYZAP - VERSÃO LIMPA 💗');
     console.log('='.repeat(50));
     console.log(`📱 Porta: ${PORT}`);
-    console.log(`👥 Chat em grupo com Dinho, Mara e Katy`);
+    console.log(`🧹 Histórico começa vazio!`);
+    console.log(`🗑️ Botão de limpar mensagens adicionado`);
     console.log('='.repeat(50) + '\n');
 });
