@@ -1,4 +1,4 @@
-// ========== KATYZAP - COM SENHA PARA LIMPAR ==========
+// ========== DINHOZAP - CHAT EXCLUSIVO ==========
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KatyZap - Grupo 💗</title>
+    <title>DinhoZap - Preto & Azul 💙</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         * {
@@ -37,7 +37,7 @@ app.get('/', (req, res) => {
         }
 
         body {
-            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            background: linear-gradient(135deg, #0a0f0f 0%, #1a2f3f 100%);
             height: 100vh;
             display: flex;
             justify-content: center;
@@ -49,64 +49,68 @@ app.get('/', (req, res) => {
             width: 100%;
             max-width: 380px;
             height: 750px;
-            background: #fff5f7;
+            background: #0f1a1f;
             border-radius: 35px;
-            box-shadow: 0 20px 40px rgba(255, 105, 180, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 100, 255, 0.3);
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            border: 3px solid #ffb6c1;
-            position: relative;
+            border: 3px solid #2c3e50;
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+            background: linear-gradient(135deg, #0a1929 0%, #0d2b3e 100%);
             padding: 15px;
             color: white;
             display: flex;
             align-items: center;
             gap: 10px;
-            border-bottom: 2px solid #ffb6c1;
+            border-bottom: 2px solid #2c5282;
         }
 
         .avatar {
             width: 45px;
             height: 45px;
-            background: #fff;
+            background: #1e3a5f;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            border: 3px solid #fff;
+            border: 3px solid #4299e1;
+            color: #4299e1;
         }
 
         .header h1 {
             font-size: 20px;
             font-weight: 600;
+            color: #e2e8f0;
         }
 
         .header h1 span {
             font-size: 12px;
             font-weight: normal;
-            opacity: 0.9;
+            opacity: 0.8;
             display: block;
+            color: #90cdf4;
         }
 
         .online-count {
             margin-left: auto;
-            background: rgba(255,255,255,0.2);
+            background: #1e3a5f;
             padding: 5px 10px;
             border-radius: 20px;
             font-size: 12px;
+            color: #90cdf4;
+            border: 1px solid #4299e1;
         }
 
         /* Botão Limpar */
         .btn-limpar {
-            background: rgba(255,255,255,0.3);
-            border: none;
-            color: white;
+            background: #1e3a5f;
+            border: 1px solid #4299e1;
+            color: #90cdf4;
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -120,7 +124,8 @@ app.get('/', (req, res) => {
         }
 
         .btn-limpar:hover {
-            background: rgba(255,255,255,0.5);
+            background: #2c5282;
+            color: white;
             transform: scale(1.1);
         }
 
@@ -128,47 +133,48 @@ app.get('/', (req, res) => {
         .user-selector {
             display: flex;
             padding: 12px;
-            gap: 8px;
-            background: #ffe4ec;
-            border-bottom: 2px solid #ffb6c1;
+            gap: 15px;
+            background: #0f1f2b;
+            border-bottom: 2px solid #2c3e50;
             justify-content: center;
         }
 
         .user-btn {
-            background: white;
-            border: 2px solid #ffb6c1;
-            padding: 10px 15px;
+            background: #1a2b3a;
+            border: 2px solid #2c5282;
+            padding: 12px 20px;
             border-radius: 30px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
-            color: #444;
+            color: #e2e8f0;
             flex: 1;
             justify-content: center;
-            max-width: 100px;
+            max-width: 140px;
         }
 
         .user-btn.ativo {
-            background: #ff7eb3;
+            background: #2c5282;
             color: white;
-            border-color: #ff4d7a;
+            border-color: #63b3ed;
             transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(66, 153, 225, 0.5);
         }
 
         .user-btn .online-indicator {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: #9e9e9e;
+            background: #4a5568;
             transition: background 0.3s;
         }
 
         .user-btn.ativo .online-indicator {
-            background: white;
+            background: #9ae6b4;
         }
 
         /* Chat Area */
@@ -176,17 +182,17 @@ app.get('/', (req, res) => {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #fff0f5;
+            background: #0f1a1f;
             overflow: hidden;
         }
 
         .chat-header {
-            background: #ffb6c1;
+            background: #0d2b3e;
             padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #ff99aa;
+            border-bottom: 2px solid #2c5282;
         }
 
         .grupo-info {
@@ -197,7 +203,7 @@ app.get('/', (req, res) => {
         .grupo-nome {
             font-size: 15px;
             font-weight: bold;
-            color: #4a2c5f;
+            color: #90cdf4;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -205,12 +211,12 @@ app.get('/', (req, res) => {
 
         .participantes {
             font-size: 10px;
-            color: #663399;
+            color: #a0aec0;
         }
 
         .digitando {
             font-size: 11px;
-            color: #666;
+            color: #90cdf4;
             font-style: italic;
             height: 16px;
             text-align: right;
@@ -223,12 +229,12 @@ app.get('/', (req, res) => {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            background: #fff5f9;
+            background: #0f1a1f;
         }
 
         .mensagem {
             max-width: 85%;
-            padding: 8px 12px;
+            padding: 10px 14px;
             border-radius: 18px;
             position: relative;
             animation: fadeIn 0.3s ease;
@@ -243,32 +249,34 @@ app.get('/', (req, res) => {
         }
 
         .mensagem.outra {
-            background: white;
-            border: 2px solid #ffb6c1;
+            background: #1a2b3a;
+            border: 2px solid #2c5282;
             align-self: flex-start;
             border-bottom-left-radius: 4px;
+            color: #e2e8f0;
         }
 
         .mensagem.minha {
-            background: #ff7eb3;
+            background: #2c5282;
             color: white;
             align-self: flex-end;
             border-bottom-right-radius: 4px;
+            border: 2px solid #4299e1;
         }
 
         .mensagem .remetente {
             font-size: 11px;
             font-weight: bold;
-            margin-bottom: 3px;
-            color: #ff4d7a;
+            margin-bottom: 4px;
+            color: #90cdf4;
         }
 
         .mensagem.minha .remetente {
-            color: rgba(255,255,255,0.9);
+            color: #bee3f8;
         }
 
         .mensagem .texto {
-            margin-bottom: 3px;
+            margin-bottom: 4px;
         }
 
         .mensagem .footer {
@@ -279,43 +287,53 @@ app.get('/', (req, res) => {
             opacity: 0.7;
         }
 
+        .mensagem.outra .footer {
+            color: #a0aec0;
+        }
+
+        .mensagem.minha .footer {
+            color: #bee3f8;
+        }
+
         /* Input Area */
         .input-area {
-            background: white;
+            background: #0f1f2b;
             padding: 12px;
             display: flex;
             gap: 8px;
-            border-top: 2px solid #ffb6c1;
+            border-top: 2px solid #2c5282;
         }
 
         .input-area input {
             flex: 1;
             padding: 12px 18px;
-            border: 2px solid #ffb6c1;
+            border: 2px solid #2c5282;
             border-radius: 30px;
             outline: none;
             font-size: 14px;
-            background: white;
-            color: #333;
+            background: #1a2b3a;
+            color: #e2e8f0;
         }
 
         .input-area input:disabled {
-            background: #f5f5f5;
+            background: #2d3748;
             cursor: not-allowed;
             opacity: 0.6;
+            color: #a0aec0;
         }
 
         .input-area input::placeholder {
-            color: #999;
+            color: #718096;
         }
 
         .input-area input:focus {
-            border-color: #ff7eb3;
+            border-color: #4299e1;
+            box-shadow: 0 0 10px rgba(66, 153, 225, 0.3);
         }
 
         .btn-enviar {
-            background: #ff7eb3;
-            border: none;
+            background: #2c5282;
+            border: 2px solid #4299e1;
             width: 48px;
             height: 48px;
             border-radius: 50%;
@@ -329,12 +347,15 @@ app.get('/', (req, res) => {
         }
 
         .btn-enviar:disabled {
-            background: #ccc;
+            background: #2d3748;
+            border-color: #4a5568;
+            color: #718096;
             cursor: not-allowed;
         }
 
         .btn-enviar:active:not(:disabled) {
             transform: scale(0.95);
+            background: #4299e1;
         }
 
         /* Modal de senha */
@@ -344,7 +365,7 @@ app.get('/', (req, res) => {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.8);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -360,12 +381,12 @@ app.get('/', (req, res) => {
         }
 
         .modal {
-            background: white;
+            background: #0f1f2b;
             border-radius: 30px;
             padding: 25px;
             width: 300px;
             text-align: center;
-            border: 3px solid #ffb6c1;
+            border: 3px solid #2c5282;
             transform: scale(0.8);
             transition: all 0.3s;
         }
@@ -375,13 +396,13 @@ app.get('/', (req, res) => {
         }
 
         .modal h3 {
-            color: #ff7eb3;
+            color: #90cdf4;
             margin-bottom: 15px;
             font-size: 20px;
         }
 
         .modal p {
-            color: #666;
+            color: #a0aec0;
             margin-bottom: 15px;
             font-size: 14px;
         }
@@ -389,16 +410,18 @@ app.get('/', (req, res) => {
         .modal input {
             width: 100%;
             padding: 12px;
-            border: 2px solid #ffb6c1;
+            border: 2px solid #2c5282;
             border-radius: 25px;
             margin-bottom: 20px;
             font-size: 14px;
             outline: none;
             text-align: center;
+            background: #1a2b3a;
+            color: #e2e8f0;
         }
 
         .modal input:focus {
-            border-color: #ff7eb3;
+            border-color: #4299e1;
         }
 
         .modal-botoes {
@@ -419,25 +442,28 @@ app.get('/', (req, res) => {
         }
 
         .modal-btn.confirmar {
-            background: #ff7eb3;
+            background: #2c5282;
             color: white;
+            border: 2px solid #4299e1;
         }
 
         .modal-btn.cancelar {
-            background: #f0f0f0;
-            color: #666;
+            background: #2d3748;
+            color: #a0aec0;
+            border: 2px solid #4a5568;
         }
 
         .modal-btn.confirmar:hover {
-            background: #ff6ba3;
+            background: #4299e1;
         }
 
         .modal-btn.cancelar:hover {
-            background: #e0e0e0;
+            background: #4a5568;
+            color: white;
         }
 
         .erro-senha {
-            color: #ff4444;
+            color: #fc8181;
             font-size: 12px;
             margin-top: -10px;
             margin-bottom: 10px;
@@ -449,19 +475,20 @@ app.get('/', (req, res) => {
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: #ff7eb3;
+            background: #2c5282;
             color: white;
             padding: 10px 20px;
             border-radius: 40px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
             z-index: 1000;
             animation: slideDown 0.3s ease;
             font-size: 14px;
-            border: 2px solid white;
+            border: 2px solid #4299e1;
         }
 
         .notificacao.erro {
-            background: #ff4444;
+            background: #9b2c2c;
+            border-color: #fc8181;
         }
 
         @keyframes slideDown {
@@ -474,25 +501,25 @@ app.get('/', (req, res) => {
         }
 
         .mensagens::-webkit-scrollbar-track {
-            background: #ffe4ec;
+            background: #1a2b3a;
         }
 
         .mensagens::-webkit-scrollbar-thumb {
-            background: #ffb6c1;
+            background: #2c5282;
             border-radius: 4px;
         }
 
         .empty-state {
             text-align: center;
-            color: #999;
+            color: #718096;
             padding: 40px 20px;
             font-size: 14px;
         }
 
         .senha-hint {
             font-size: 11px;
-            color: #999;
-            margin-top: 5px;
+            color: #718096;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -500,8 +527,8 @@ app.get('/', (req, res) => {
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="avatar">💗</div>
-            <h1>KatyZap<br><span>Grupo das Amigas</span></h1>
+            <div class="avatar">💙</div>
+            <h1>DinhoZap<br><span>by Dinho</span></h1>
             <div class="online-count" id="onlineCount">0 online</div>
             <button class="btn-limpar" onclick="abrirModalSenha()" title="Limpar todas as mensagens (requer senha)">🗑️</button>
         </div>
@@ -512,13 +539,9 @@ app.get('/', (req, res) => {
                 <span class="online-indicator" id="status-dinho"></span>
                 <span>👨 Dinho</span>
             </div>
-            <div class="user-btn" data-user="mara" onclick="selecionarUsuario('mara')">
-                <span class="online-indicator" id="status-mara"></span>
-                <span>👩 Mara</span>
-            </div>
-            <div class="user-btn" data-user="katy" onclick="selecionarUsuario('katy')">
-                <span class="online-indicator" id="status-katy"></span>
-                <span>👸 Katy</span>
+            <div class="user-btn" data-user="liliane" onclick="selecionarUsuario('liliane')">
+                <span class="online-indicator" id="status-liliane"></span>
+                <span>👩 Liliane</span>
             </div>
         </div>
 
@@ -527,7 +550,7 @@ app.get('/', (req, res) => {
             <div class="chat-header">
                 <div class="grupo-info">
                     <div class="grupo-nome">
-                        <span>💬 Grupo KatyZap</span>
+                        <span>💬 Conversa Exclusiva</span>
                     </div>
                     <div class="participantes" id="participantesText">Ninguém online</div>
                 </div>
@@ -537,8 +560,8 @@ app.get('/', (req, res) => {
             <!-- Mensagens -->
             <div class="mensagens" id="mensagens">
                 <div class="empty-state" id="emptyState">
-                    💗 Nenhuma mensagem ainda<br>
-                    Seja a primeira a conversar!
+                    💙 Nenhuma mensagem ainda<br>
+                    Comece a conversar!
                 </div>
             </div>
 
@@ -561,7 +584,7 @@ app.get('/', (req, res) => {
                 <button class="modal-btn cancelar" onclick="fecharModalSenha()">Cancelar</button>
                 <button class="modal-btn confirmar" onclick="verificarSenha()">Limpar</button>
             </div>
-            <div class="senha-hint">💡 Dica: pergunte ao Dinho</div>
+            <div class="senha-hint">💡 Apenas o Dinho sabe a senha</div>
         </div>
     </div>
 
@@ -586,16 +609,14 @@ app.get('/', (req, res) => {
         
         // Cores para cada usuário
         const cores = {
-            dinho: '#FF6B6B',
-            mara: '#4ECDC4',
-            katy: '#FFB347'
+            dinho: '#4299e1',
+            liliane: '#9f7aea'
         };
 
         // Nomes formatados
         const nomes = {
             dinho: 'Dinho',
-            mara: 'Mara',
-            katy: 'Katy'
+            liliane: 'Liliane'
         };
 
         // ========== FUNÇÕES ==========
@@ -615,7 +636,7 @@ app.get('/', (req, res) => {
                 // Habilitar input
                 mensagemInput.disabled = false;
                 btnEnviar.disabled = false;
-                mensagemInput.placeholder = \`Digite como \${meuNome}... 💗\`;
+                mensagemInput.placeholder = \`Digite como \${meuNome}... 💙\`;
                 mensagemInput.focus();
                 
                 // Entrar no chat
@@ -640,7 +661,7 @@ app.get('/', (req, res) => {
 
                 setupEventListeners();
                 
-                notificar(\`💗 Você entrou como \${meuNome}\`);
+                notificar(\`💙 Você entrou como \${meuNome}\`);
             }
         }
 
@@ -655,7 +676,6 @@ app.get('/', (req, res) => {
                 socket.emit('digitando', { nome: meuNome });
             });
 
-            // Enter no input de senha
             senhaInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') verificarSenha();
             });
@@ -696,7 +716,7 @@ app.get('/', (req, res) => {
                 } else {
                     // Senha errada
                     erroSenha.style.display = 'block';
-                    senhaInput.style.borderColor = '#ff4444';
+                    senhaInput.style.borderColor = '#fc8181';
                     notificar('❌ Senha incorreta!', true);
                 }
             });
@@ -781,7 +801,7 @@ app.get('/', (req, res) => {
                 const remetente = document.createElement('div');
                 remetente.className = 'remetente';
                 remetente.textContent = msg.nome;
-                remetente.style.color = cores[msg.de] || '#ff4d7a';
+                remetente.style.color = cores[msg.de] || '#90cdf4';
                 div.appendChild(remetente);
             }
             
@@ -805,7 +825,7 @@ app.get('/', (req, res) => {
         function atualizarStatus(contato, online) {
             const badge = document.getElementById(\`status-\${contato}\`);
             if (badge) {
-                badge.style.background = online ? '#4caf50' : '#9e9e9e';
+                badge.style.background = online ? '#9ae6b4' : '#4a5568';
             }
         }
 
@@ -844,7 +864,7 @@ app.get('/', (req, res) => {
 // API Status
 app.get('/api/status', (req, res) => {
     res.json({
-        nome: 'KatyZap',
+        nome: 'DinhoZap',
         usuariosOnline: usuarios.size,
         online: Array.from(usuarios.values()).map(u => u.nome)
     });
@@ -861,7 +881,7 @@ app.post('/api/verificar-senha', (req, res) => {
     res.json({ valida: senha === SENHA_LIMPAR });
 });
 
-// API Limpar mensagens (protegida por senha - mas a verificação é feita antes)
+// API Limpar mensagens
 app.post('/api/limpar', (req, res) => {
     historicoGrupo = [];
     io.emit('mensagens_limpas');
@@ -870,7 +890,7 @@ app.post('/api/limpar', (req, res) => {
 
 // Socket.IO
 io.on('connection', (socket) => {
-    console.log(`💗 Novo usuário: ${socket.id}`);
+    console.log(`💙 Novo usuário: ${socket.id}`);
 
     socket.on('entrar', (dados) => {
         const { nome, contato } = dados;
@@ -884,7 +904,7 @@ io.on('connection', (socket) => {
             contato: contato
         });
         
-        console.log(`👤 ${nome} entrou no grupo`);
+        console.log(`👤 ${nome} entrou no DinhoZap`);
     });
 
     socket.on('mensagem_grupo', (dados) => {
@@ -913,17 +933,18 @@ io.on('connection', (socket) => {
         if (usuario) {
             io.emit('usuario_offline', usuario);
             usuarios.delete(socket.id);
-            console.log(`💔 ${usuario.nome} saiu do grupo`);
+            console.log(`💔 ${usuario.nome} saiu do DinhoZap`);
         }
     });
 });
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(50));
-    console.log('💗 KATYZAP - COM SENHA 💗');
+    console.log('💙 DINHOZAP - PRETO E AZUL 💙');
     console.log('='.repeat(50));
     console.log(`📱 Porta: ${PORT}`);
-    console.log(`🔐 Senha para limpar: dinho123456`);
-    console.log(`🧹 Só quem sabe a senha pode apagar`);
+    console.log(`👥 Contatos: Dinho e Liliane`);
+    console.log(`🔐 Senha: dinho123456`);
+    console.log(`🎨 Tema: Preto e Azul`);
     console.log('='.repeat(50) + '\n');
 });
