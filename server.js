@@ -1,4 +1,4 @@
-// ========== KATYZAP - CHAT EM GRUPO (VERSÃO LIMPA) ==========
+// ========== KATYZAP - COM SENHA PARA LIMPAR ==========
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -11,10 +11,11 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const usuarios = new Map(); // {socketId: {nome: 'Dinho', contato: 'dinho'}}
-
-// Histórico do grupo - COMEÇA VAZIO!
+const usuarios = new Map();
 let historicoGrupo = [];
+
+// Senha para limpar conversas
+const SENHA_LIMPAR = "dinho123456";
 
 app.use(express.json());
 
@@ -336,7 +337,7 @@ app.get('/', (req, res) => {
             transform: scale(0.95);
         }
 
-        /* Modal de confirmação */
+        /* Modal de senha */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -362,7 +363,7 @@ app.get('/', (req, res) => {
             background: white;
             border-radius: 30px;
             padding: 25px;
-            width: 280px;
+            width: 300px;
             text-align: center;
             border: 3px solid #ffb6c1;
             transform: scale(0.8);
@@ -381,8 +382,23 @@ app.get('/', (req, res) => {
 
         .modal p {
             color: #666;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ffb6c1;
+            border-radius: 25px;
             margin-bottom: 20px;
             font-size: 14px;
+            outline: none;
+            text-align: center;
+        }
+
+        .modal input:focus {
+            border-color: #ff7eb3;
         }
 
         .modal-botoes {
@@ -399,6 +415,7 @@ app.get('/', (req, res) => {
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            flex: 1;
         }
 
         .modal-btn.confirmar {
@@ -413,11 +430,18 @@ app.get('/', (req, res) => {
 
         .modal-btn.confirmar:hover {
             background: #ff6ba3;
-            transform: scale(1.05);
         }
 
         .modal-btn.cancelar:hover {
             background: #e0e0e0;
+        }
+
+        .erro-senha {
+            color: #ff4444;
+            font-size: 12px;
+            margin-top: -10px;
+            margin-bottom: 10px;
+            display: none;
         }
 
         .notificacao {
@@ -434,6 +458,10 @@ app.get('/', (req, res) => {
             animation: slideDown 0.3s ease;
             font-size: 14px;
             border: 2px solid white;
+        }
+
+        .notificacao.erro {
+            background: #ff4444;
         }
 
         @keyframes slideDown {
@@ -460,6 +488,12 @@ app.get('/', (req, res) => {
             padding: 40px 20px;
             font-size: 14px;
         }
+
+        .senha-hint {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -469,7 +503,7 @@ app.get('/', (req, res) => {
             <div class="avatar">💗</div>
             <h1>KatyZap<br><span>Grupo das Amigas</span></h1>
             <div class="online-count" id="onlineCount">0 online</div>
-            <button class="btn-limpar" onclick="abrirModalLimpar()" title="Limpar todas as mensagens">🗑️</button>
+            <button class="btn-limpar" onclick="abrirModalSenha()" title="Limpar todas as mensagens (requer senha)">🗑️</button>
         </div>
 
         <!-- Seleção de usuário -->
@@ -516,15 +550,18 @@ app.get('/', (req, res) => {
         </div>
     </div>
 
-    <!-- Modal de confirmação para limpar mensagens -->
-    <div class="modal-overlay" id="modalLimpar">
+    <!-- Modal de senha para limpar mensagens -->
+    <div class="modal-overlay" id="modalSenha">
         <div class="modal">
-            <h3>🗑️ Limpar conversa</h3>
-            <p>Tem certeza que deseja apagar todas as mensagens do grupo?</p>
+            <h3>🔐 Área Restrita</h3>
+            <p>Digite a senha para limpar todas as mensagens:</p>
+            <input type="password" id="senhaInput" placeholder="••••••••" maxlength="20">
+            <div class="erro-senha" id="erroSenha">Senha incorreta!</div>
             <div class="modal-botoes">
-                <button class="modal-btn cancelar" onclick="fecharModalLimpar()">Cancelar</button>
-                <button class="modal-btn confirmar" onclick="limparMensagens()">Limpar</button>
+                <button class="modal-btn cancelar" onclick="fecharModalSenha()">Cancelar</button>
+                <button class="modal-btn confirmar" onclick="verificarSenha()">Limpar</button>
             </div>
+            <div class="senha-hint">💡 Dica: pergunte ao Dinho</div>
         </div>
     </div>
 
@@ -543,7 +580,9 @@ app.get('/', (req, res) => {
         const digitandoSpan = document.getElementById('digitando');
         const onlineCount = document.getElementById('onlineCount');
         const participantesText = document.getElementById('participantesText');
-        const modalLimpar = document.getElementById('modalLimpar');
+        const modalSenha = document.getElementById('modalSenha');
+        const senhaInput = document.getElementById('senhaInput');
+        const erroSenha = document.getElementById('erroSenha');
         
         // Cores para cada usuário
         const cores = {
@@ -615,26 +654,52 @@ app.get('/', (req, res) => {
             mensagemInput.addEventListener('input', () => {
                 socket.emit('digitando', { nome: meuNome });
             });
+
+            // Enter no input de senha
+            senhaInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') verificarSenha();
+            });
         }
 
         // Modal functions
-        function abrirModalLimpar() {
-            modalLimpar.classList.add('ativo');
+        function abrirModalSenha() {
+            modalSenha.classList.add('ativo');
+            senhaInput.value = '';
+            erroSenha.style.display = 'none';
+            setTimeout(() => senhaInput.focus(), 300);
         }
 
-        function fecharModalLimpar() {
-            modalLimpar.classList.remove('ativo');
+        function fecharModalSenha() {
+            modalSenha.classList.remove('ativo');
         }
 
-        function limparMensagens() {
-            fetch('/api/limpar', { method: 'POST' })
-                .then(res => res.json())
-                .then(() => {
-                    mensagensDiv.innerHTML = '';
-                    mensagensDiv.appendChild(emptyState);
-                    notificar('✨ Todas as mensagens foram limpas!');
-                    fecharModalLimpar();
-                });
+        function verificarSenha() {
+            const senha = senhaInput.value;
+            
+            fetch('/api/verificar-senha', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ senha: senha })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.valida) {
+                    // Senha correta - limpar mensagens
+                    fetch('/api/limpar', { method: 'POST' })
+                        .then(res => res.json())
+                        .then(() => {
+                            mensagensDiv.innerHTML = '';
+                            mensagensDiv.appendChild(emptyState);
+                            notificar('✨ Todas as mensagens foram limpas!');
+                            fecharModalSenha();
+                        });
+                } else {
+                    // Senha errada
+                    erroSenha.style.display = 'block';
+                    senhaInput.style.borderColor = '#ff4444';
+                    notificar('❌ Senha incorreta!', true);
+                }
+            });
         }
 
         // Socket events
@@ -758,19 +823,19 @@ app.get('/', (req, res) => {
             }
         }
 
-        function notificar(texto) {
+        function notificar(texto, erro = false) {
             const notif = document.createElement('div');
-            notif.className = 'notificacao';
+            notif.className = 'notificacao' + (erro ? ' erro' : '');
             notif.textContent = texto;
             document.body.appendChild(notif);
             setTimeout(() => notif.remove(), 3000);
         }
 
-        // Tornar funções globais para o onclick
+        // Tornar funções globais
         window.selecionarUsuario = selecionarUsuario;
-        window.abrirModalLimpar = abrirModalLimpar;
-        window.fecharModalLimpar = fecharModalLimpar;
-        window.limparMensagens = limparMensagens;
+        window.abrirModalSenha = abrirModalSenha;
+        window.fecharModalSenha = fecharModalSenha;
+        window.verificarSenha = verificarSenha;
     </script>
 </body>
 </html>`);
@@ -790,7 +855,13 @@ app.get('/api/historico', (req, res) => {
     res.json(historicoGrupo);
 });
 
-// API Limpar mensagens
+// API Verificar senha
+app.post('/api/verificar-senha', (req, res) => {
+    const { senha } = req.body;
+    res.json({ valida: senha === SENHA_LIMPAR });
+});
+
+// API Limpar mensagens (protegida por senha - mas a verificação é feita antes)
 app.post('/api/limpar', (req, res) => {
     historicoGrupo = [];
     io.emit('mensagens_limpas');
@@ -805,10 +876,8 @@ io.on('connection', (socket) => {
         const { nome, contato } = dados;
         usuarios.set(socket.id, { nome, contato, socketId: socket.id });
         
-        // Enviar histórico para o novo usuário
         socket.emit('historico_grupo', historicoGrupo);
         
-        // Avisar todos que novo usuário entrou
         io.emit('usuario_online', {
             socketId: socket.id,
             nome: nome,
@@ -829,11 +898,9 @@ io.on('connection', (socket) => {
             timestamp: Date.now()
         };
         
-        // Salvar no histórico
         historicoGrupo.push(novaMensagem);
-        if (historicoGrupo.length > 200) historicoGrupo.shift(); // Limite de 200 mensagens
+        if (historicoGrupo.length > 200) historicoGrupo.shift();
         
-        // Enviar para todos
         io.emit('nova_mensagem_grupo', novaMensagem);
     });
 
@@ -853,10 +920,10 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(50));
-    console.log('💗 KATYZAP - VERSÃO LIMPA 💗');
+    console.log('💗 KATYZAP - COM SENHA 💗');
     console.log('='.repeat(50));
     console.log(`📱 Porta: ${PORT}`);
-    console.log(`🧹 Histórico começa vazio!`);
-    console.log(`🗑️ Botão de limpar mensagens adicionado`);
+    console.log(`🔐 Senha para limpar: dinho123456`);
+    console.log(`🧹 Só quem sabe a senha pode apagar`);
     console.log('='.repeat(50) + '\n');
 });
