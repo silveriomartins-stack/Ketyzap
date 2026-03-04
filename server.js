@@ -1,59 +1,37 @@
-// ========== KATYZAP - VERSÃO RAILWAY ==========
-// Tudo inline, pronto para deploy!
-
+// ========== KATYZAP - VERSÃO RAILWAY CORRIGIDA ==========
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const os = require('os');
 
-// Configurações
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 const PORT = process.env.PORT || 3000;
 const usuarios = new Map();
 const mensagensSalvas = {
-    dinho: [],
-    mara: [],
-    katy: []
-};
-
-// Mensagens iniciais
-const mensagensIniciais = {
     dinho: [
-        { de: 'dinho', para: 'todos', texto: 'E aí, galera! 💪', hora: '10:30', timestamp: Date.now() - 3600000 },
-        { de: 'katy', para: 'todos', texto: 'Oiii 💗', hora: '10:31', timestamp: Date.now() - 3599000 }
+        { de: 'dinho', para: 'todos', texto: 'E aí, galera! 💪', hora: '10:30' },
+        { de: 'katy', para: 'todos', texto: 'Oiii 💗', hora: '10:31' }
     ],
     mara: [
-        { de: 'mara', para: 'todos', texto: 'Bom dia! 🌸', hora: '09:15', timestamp: Date.now() - 7200000 },
-        { de: 'dinho', para: 'todos', texto: 'Bom dia, Mara!', hora: '09:16', timestamp: Date.now() - 7199000 }
+        { de: 'mara', para: 'todos', texto: 'Bom dia! 🌸', hora: '09:15' },
+        { de: 'dinho', para: 'todos', texto: 'Bom dia, Mara!', hora: '09:16' }
     ],
     katy: [
-        { de: 'katy', para: 'todos', texto: 'Prontos pro rolê? 💕', hora: '14:20', timestamp: Date.now() - 1800000 },
-        { de: 'mara', para: 'todos', texto: 'Já tô chegando! 🚗', hora: '14:22', timestamp: Date.now() - 1798000 }
+        { de: 'katy', para: 'todos', texto: 'Prontos pro rolê? 💕', hora: '14:20' },
+        { de: 'mara', para: 'todos', texto: 'Já tô chegando! 🚗', hora: '14:22' }
     ]
 };
 
-// Inicializar mensagens
-Object.keys(mensagensIniciais).forEach(key => {
-    mensagensSalvas[key] = mensagensIniciais[key];
-});
-
-// Middleware
-app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Rota principal - HTML INLINE
+// Rota principal - HTML INLINE CORRIGIDO
 app.get('/', (req, res) => {
-    res.send(`
-<!DOCTYPE html>
+    res.send(`<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -65,76 +43,121 @@ app.get('/', (req, res) => {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 15px;
+            padding: 10px;
         }
 
         .container {
             width: 100%;
-            max-width: 400px;
-            height: 85vh;
+            max-width: 380px;
+            height: 750px;
             background: #fff5f7;
-            border-radius: 40px;
-            box-shadow: 0 25px 50px rgba(255, 105, 180, 0.4);
+            border-radius: 35px;
+            box-shadow: 0 20px 40px rgba(255, 105, 180, 0.3);
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            border: 4px solid #ffb6c1;
+            border: 3px solid #ffb6c1;
         }
 
         /* Header */
         .header {
             background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
-            padding: 20px;
+            padding: 18px;
             color: white;
             display: flex;
             align-items: center;
             gap: 12px;
+            border-bottom: 2px solid #ffb6c1;
         }
 
         .avatar {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             background: #fff;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
+            font-size: 26px;
             border: 3px solid #fff;
         }
 
         .header h1 {
             font-size: 22px;
-            flex: 1;
+            font-weight: 600;
+            line-height: 1.2;
         }
 
         .header h1 span {
-            font-size: 12px;
-            display: block;
+            font-size: 13px;
+            font-weight: normal;
             opacity: 0.9;
+            display: block;
         }
 
         .server-status {
-            font-size: 10px;
-            background: rgba(255,255,255,0.2);
-            padding: 4px 8px;
-            border-radius: 20px;
+            margin-left: auto;
+            font-size: 20px;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .welcome-screen h2 {
+            font-size: 32px;
+            color: #ff7eb3;
+            margin-bottom: 10px;
+        }
+
+        .welcome-screen p {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+
+        .btn-escolher {
+            background: #ff7eb3;
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 40px;
+            margin: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 2px solid white;
+            width: 200px;
+            box-shadow: 0 5px 15px rgba(255,126,179,0.4);
+            transition: all 0.3s;
+        }
+
+        .btn-escolher:hover {
+            transform: scale(1.05);
+            background: #ff6ba3;
         }
 
         /* Contatos */
         .contatos {
             display: flex;
-            padding: 12px;
-            gap: 8px;
+            padding: 15px;
+            gap: 10px;
             background: #ffe4ec;
             overflow-x: auto;
             border-bottom: 2px solid #ffb6c1;
@@ -142,30 +165,30 @@ app.get('/', (req, res) => {
 
         .contato-card {
             background: white;
-            padding: 10px 15px;
-            border-radius: 25px;
+            padding: 12px 18px;
+            border-radius: 30px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             border: 2px solid #ffb6c1;
-            min-width: 100px;
+            min-width: 110px;
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
+            color: #444;
         }
 
         .contato-card.ativo {
             background: #ff7eb3;
             color: white;
             border-color: #ff4d7a;
-            transform: scale(1.02);
         }
 
         .online-badge {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: #9e9e9e;
             display: inline-block;
@@ -187,7 +210,7 @@ app.get('/', (req, res) => {
 
         .chat-header {
             background: #ffb6c1;
-            padding: 12px;
+            padding: 12px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -200,24 +223,25 @@ app.get('/', (req, res) => {
         }
 
         .contato-nome {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
-            color: #663399;
+            color: #4a2c5f;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .status-text {
-            font-size: 11px;
+            font-size: 12px;
             transition: color 0.3s;
         }
 
         .digitando {
-            font-size: 11px;
+            font-size: 12px;
             color: #666;
             font-style: italic;
-            height: 15px;
+            height: 18px;
+            margin-top: 2px;
         }
 
         .mensagens {
@@ -226,21 +250,25 @@ app.get('/', (req, res) => {
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
+            background: #fff5f9;
         }
 
         .mensagem {
             max-width: 80%;
             padding: 10px 14px;
-            border-radius: 20px;
+            border-radius: 18px;
             position: relative;
-            animation: slideIn 0.3s ease;
-            word-wrap: break-word;
-            font-size: 14px;
+            animation: fadeIn 0.3s ease;
+            word-break: break-word;
+            font-size: 15px;
+            line-height: 1.4;
+            letter-spacing: normal;
+            white-space: normal;
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -248,14 +276,15 @@ app.get('/', (req, res) => {
             background: white;
             border: 2px solid #ffb6c1;
             align-self: flex-start;
-            border-bottom-left-radius: 5px;
+            border-bottom-left-radius: 4px;
+            color: #333;
         }
 
         .mensagem.enviada {
             background: #ff7eb3;
             color: white;
             align-self: flex-end;
-            border-bottom-right-radius: 5px;
+            border-bottom-right-radius: 4px;
         }
 
         .mensagem .footer {
@@ -265,6 +294,14 @@ app.get('/', (req, res) => {
             margin-top: 5px;
             font-size: 10px;
             opacity: 0.7;
+        }
+
+        .mensagem.recebida .footer {
+            color: #666;
+        }
+
+        .mensagem.enviada .footer {
+            color: rgba(255,255,255,0.8);
         }
 
         /* Input Area */
@@ -278,11 +315,17 @@ app.get('/', (req, res) => {
 
         .input-area input {
             flex: 1;
-            padding: 10px 15px;
+            padding: 12px 18px;
             border: 2px solid #ffb6c1;
-            border-radius: 25px;
+            border-radius: 30px;
             outline: none;
-            font-size: 14px;
+            font-size: 15px;
+            background: white;
+            color: #333;
+        }
+
+        .input-area input::placeholder {
+            color: #999;
         }
 
         .input-area input:focus {
@@ -292,11 +335,11 @@ app.get('/', (req, res) => {
         .btn-enviar {
             background: #ff7eb3;
             border: none;
-            width: 45px;
-            height: 45px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             color: white;
-            font-size: 20px;
+            font-size: 22px;
             cursor: pointer;
             transition: all 0.3s;
             display: flex;
@@ -315,12 +358,13 @@ app.get('/', (req, res) => {
             transform: translateX(-50%);
             background: #ff7eb3;
             color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
+            padding: 12px 24px;
+            border-radius: 40px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
             z-index: 1000;
             animation: slideDown 0.3s ease;
-            font-size: 14px;
+            font-size: 15px;
+            font-weight: 500;
             border: 2px solid white;
         }
 
@@ -329,36 +373,18 @@ app.get('/', (req, res) => {
             to { top: 20px; }
         }
 
-        .welcome-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #ff7eb3;
-            text-align: center;
-            padding: 20px;
+        /* Scrollbar */
+        .mensagens::-webkit-scrollbar {
+            width: 5px;
         }
 
-        .welcome-screen h2 {
-            font-size: 32px;
-            margin-bottom: 10px;
+        .mensagens::-webkit-scrollbar-track {
+            background: #ffe4ec;
         }
 
-        .welcome-screen p {
-            margin-bottom: 20px;
-        }
-
-        .btn-escolher {
-            background: #ff7eb3;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 30px;
-            margin: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            border: 2px solid white;
+        .mensagens::-webkit-scrollbar-thumb {
+            background: #ffb6c1;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -367,11 +393,11 @@ app.get('/', (req, res) => {
         <!-- Header -->
         <div class="header">
             <div class="avatar">💗</div>
-            <h1>KatyZap<br><span>by Katy 💕</span></h1>
+            <h1>KatyZap<br><span>by Katy</span></h1>
             <div class="server-status" id="serverStatus">🟢</div>
         </div>
 
-        <!-- Tela de escolha (inicial) -->
+        <!-- Tela de escolha -->
         <div id="welcomeScreen" class="welcome-screen">
             <h2>💗 Bem-vinda!</h2>
             <p>Escolha seu nome:</p>
@@ -380,8 +406,8 @@ app.get('/', (req, res) => {
             <button class="btn-escolher" onclick="escolherNome('Katy')">👸 Katy</button>
         </div>
 
-        <!-- Chat (inicialmente escondido) -->
-        <div id="chatContainer" style="display: none; height: 100%; display: flex; flex-direction: none;">
+        <!-- Chat Container -->
+        <div id="chatContainer" style="display: none; height: 100%; flex-direction: column;">
             <!-- Contatos -->
             <div class="contatos" id="contatos">
                 <div class="contato-card" data-contato="dinho" data-nome="Dinho">
@@ -463,7 +489,7 @@ app.get('/', (req, res) => {
                 contato: meuContato
             });
             
-            // Configurar
+            // Configurar eventos
             setupEventListeners();
             selecionarContato('dinho');
             
@@ -563,13 +589,14 @@ app.get('/', (req, res) => {
         function adicionarMensagem(msg, tipo) {
             const div = document.createElement('div');
             div.className = \`mensagem \${tipo}\`;
-            div.innerHTML = \`
-                \${msg.texto}
-                <div class="footer">
-                    \${msg.hora || ''}
-                    \${msg.automatica ? '🤖' : ''}
-                </div>
-            \`;
+            div.textContent = msg.texto; // Usar textContent em vez de innerHTML para evitar problemas de formatação
+            
+            const footer = document.createElement('div');
+            footer.className = 'footer';
+            footer.textContent = msg.hora || '';
+            if (msg.automatica) footer.textContent += ' 🤖';
+            
+            div.appendChild(footer);
             mensagensDiv.appendChild(div);
             mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
         }
@@ -598,13 +625,12 @@ app.get('/', (req, res) => {
         setInterval(() => {
             fetch('/api/status')
                 .then(res => res.json())
-                .then(() => { serverStatus.innerHTML = '🟢'; })
-                .catch(() => { serverStatus.innerHTML = '🔴'; });
+                .then(() => { serverStatus.textContent = '🟢'; })
+                .catch(() => { serverStatus.textContent = '🔴'; });
         }, 5000);
     </script>
 </body>
-</html>
-    `);
+</html>`);
 });
 
 // API Status
@@ -700,13 +726,11 @@ io.on('connection', (socket) => {
     });
 });
 
-// Iniciar servidor
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(50));
-    console.log('💗 KATYZAP - PRONTO PARA RAILWAY! 💗');
+    console.log('💗 KATYZAP - CORRIGIDO! 💗');
     console.log('='.repeat(50));
     console.log(`📱 Porta: ${PORT}`);
     console.log(`💕 Contatos: Dinho, Mara, Katy`);
-    console.log(`🚀 Socket.IO ativo!`);
     console.log('='.repeat(50) + '\n');
 });
