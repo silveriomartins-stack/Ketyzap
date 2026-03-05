@@ -1,4 +1,4 @@
-// ========== DINHOZAP - CHAT EXCLUSIVO ==========
+// ========== DINHOZAP - GRUPO DINHO, GABI E AMANDA ==========
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DinhoZap - Preto & Azul 💙</title>
+    <title>DinhoZap - Grupo 💙</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         * {
@@ -133,28 +133,29 @@ app.get('/', (req, res) => {
         .user-selector {
             display: flex;
             padding: 12px;
-            gap: 15px;
+            gap: 8px;
             background: #0f1f2b;
             border-bottom: 2px solid #2c3e50;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .user-btn {
             background: #1a2b3a;
             border: 2px solid #2c5282;
-            padding: 12px 20px;
+            padding: 10px 15px;
             border-radius: 30px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             color: #e2e8f0;
             flex: 1;
             justify-content: center;
-            max-width: 140px;
+            min-width: 100px;
         }
 
         .user-btn.ativo {
@@ -539,9 +540,13 @@ app.get('/', (req, res) => {
                 <span class="online-indicator" id="status-dinho"></span>
                 <span>👨 Dinho</span>
             </div>
-            <div class="user-btn" data-user="liliane" onclick="selecionarUsuario('liliane')">
-                <span class="online-indicator" id="status-liliane"></span>
-                <span>👩 Liliane</span>
+            <div class="user-btn" data-user="gabi" onclick="selecionarUsuario('gabi')">
+                <span class="online-indicator" id="status-gabi"></span>
+                <span>👩 Gabi</span>
+            </div>
+            <div class="user-btn" data-user="amanda" onclick="selecionarUsuario('amanda')">
+                <span class="online-indicator" id="status-amanda"></span>
+                <span>👸 Amanda</span>
             </div>
         </div>
 
@@ -550,7 +555,7 @@ app.get('/', (req, res) => {
             <div class="chat-header">
                 <div class="grupo-info">
                     <div class="grupo-nome">
-                        <span>💬 Conversa Exclusiva</span>
+                        <span>💬 Grupo do Dinho</span>
                     </div>
                     <div class="participantes" id="participantesText">Ninguém online</div>
                 </div>
@@ -610,13 +615,15 @@ app.get('/', (req, res) => {
         // Cores para cada usuário
         const cores = {
             dinho: '#4299e1',
-            liliane: '#9f7aea'
+            gabi: '#9f7aea',
+            amanda: '#f687b3'
         };
 
         // Nomes formatados
         const nomes = {
             dinho: 'Dinho',
-            liliane: 'Liliane'
+            gabi: 'Gabi',
+            amanda: 'Amanda'
         };
 
         // ========== FUNÇÕES ==========
@@ -940,11 +947,14 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(50));
-    console.log('💙 DINHOZAP - PRETO E AZUL 💙');
+    console.log('💙 DINHOZAP - DINHO, GABI & AMANDA 💙');
     console.log('='.repeat(50));
     console.log(`📱 Porta: ${PORT}`);
-    console.log(`👥 Contatos: Dinho e Liliane`);
+    console.log(`👥 Contatos: Dinho, Gabi e Amanda`);
+    console.log(`🎨 Cores:`);
+    console.log(`   • Dinho: Azul (#4299e1)`);
+    console.log(`   • Gabi: Roxo (#9f7aea)`);
+    console.log(`   • Amanda: Rosa (#f687b3)`);
     console.log(`🔐 Senha: dinho123456`);
-    console.log(`🎨 Tema: Preto e Azul`);
     console.log('='.repeat(50) + '\n');
 });
