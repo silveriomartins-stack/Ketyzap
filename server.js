@@ -1,4 +1,4 @@
-// ========== DINHOZAP - GRUPO DINHO, GABI E AMANDA ==========
+// ========== DINHOZAP - COM PAINEL DE ADMIN ==========
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -14,10 +14,18 @@ const PORT = process.env.PORT || 3000;
 const usuarios = new Map();
 let historicoGrupo = [];
 
-// Senha para limpar conversas
-const SENHA_LIMPAR = "dinho123456";
+// Configuração inicial de participantes
+let participantes = [
+    { id: 'dinho', nome: 'Dinho', emoji: '👨', cor: '#4299e1' },
+    { id: 'gabi', nome: 'Gabi', emoji: '👩', cor: '#9f7aea' },
+    { id: 'amanda', nome: 'Amanda', emoji: '👸', cor: '#f687b3' }
+];
+
+// Senha para limpar conversas e acessar admin
+const SENHA_ADMIN = "dinho123456";
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Rota principal
 app.get('/', (req, res) => {
@@ -56,6 +64,7 @@ app.get('/', (req, res) => {
             display: flex;
             flex-direction: column;
             border: 3px solid #2c3e50;
+            position: relative;
         }
 
         /* Header */
@@ -106,8 +115,8 @@ app.get('/', (req, res) => {
             border: 1px solid #4299e1;
         }
 
-        /* Botão Limpar */
-        .btn-limpar {
+        /* Botões do Header */
+        .btn-admin, .btn-limpar {
             background: #1e3a5f;
             border: 1px solid #4299e1;
             color: #90cdf4;
@@ -123,7 +132,7 @@ app.get('/', (req, res) => {
             transition: all 0.3s;
         }
 
-        .btn-limpar:hover {
+        .btn-admin:hover, .btn-limpar:hover {
             background: #2c5282;
             color: white;
             transform: scale(1.1);
@@ -138,6 +147,8 @@ app.get('/', (req, res) => {
             border-bottom: 2px solid #2c3e50;
             justify-content: center;
             flex-wrap: wrap;
+            min-height: 80px;
+            overflow-x: auto;
         }
 
         .user-btn {
@@ -269,7 +280,6 @@ app.get('/', (req, res) => {
             font-size: 11px;
             font-weight: bold;
             margin-bottom: 4px;
-            color: #90cdf4;
         }
 
         .mensagem.minha .remetente {
@@ -359,7 +369,7 @@ app.get('/', (req, res) => {
             background: #4299e1;
         }
 
-        /* Modal de senha */
+        /* Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -385,11 +395,13 @@ app.get('/', (req, res) => {
             background: #0f1f2b;
             border-radius: 30px;
             padding: 25px;
-            width: 300px;
+            width: 320px;
             text-align: center;
             border: 3px solid #2c5282;
             transform: scale(0.8);
             transition: all 0.3s;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         .modal-overlay.ativo .modal {
@@ -408,20 +420,19 @@ app.get('/', (req, res) => {
             font-size: 14px;
         }
 
-        .modal input {
+        .modal input, .modal select {
             width: 100%;
             padding: 12px;
             border: 2px solid #2c5282;
             border-radius: 25px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-size: 14px;
             outline: none;
-            text-align: center;
             background: #1a2b3a;
             color: #e2e8f0;
         }
 
-        .modal input:focus {
+        .modal input:focus, .modal select:focus {
             border-color: #4299e1;
         }
 
@@ -429,10 +440,11 @@ app.get('/', (req, res) => {
             display: flex;
             gap: 10px;
             justify-content: center;
+            margin-top: 20px;
         }
 
         .modal-btn {
-            padding: 10px 25px;
+            padding: 10px 20px;
             border: none;
             border-radius: 25px;
             font-size: 14px;
@@ -454,6 +466,12 @@ app.get('/', (req, res) => {
             border: 2px solid #4a5568;
         }
 
+        .modal-btn.remover {
+            background: #9b2c2c;
+            color: white;
+            border: 2px solid #fc8181;
+        }
+
         .modal-btn.confirmar:hover {
             background: #4299e1;
         }
@@ -463,7 +481,11 @@ app.get('/', (req, res) => {
             color: white;
         }
 
-        .erro-senha {
+        .modal-btn.remover:hover {
+            background: #c53030;
+        }
+
+        .erro-msg {
             color: #fc8181;
             font-size: 12px;
             margin-top: -10px;
@@ -517,10 +539,64 @@ app.get('/', (req, res) => {
             font-size: 14px;
         }
 
-        .senha-hint {
-            font-size: 11px;
-            color: #718096;
-            margin-top: 10px;
+        /* Lista de participantes no modal */
+        .participante-item {
+            background: #1a2b3a;
+            border: 2px solid #2c5282;
+            border-radius: 30px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #e2e8f0;
+        }
+
+        .participante-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .participante-cor {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .btn-remover-participante {
+            background: none;
+            border: none;
+            color: #fc8181;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .btn-remover-participante:hover {
+            color: #feb2b2;
+        }
+
+        .cores-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .cor-opcao {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .cor-opcao.selecionada {
+            border-color: white;
+            transform: scale(1.1);
         }
     </style>
 </head>
@@ -531,24 +607,12 @@ app.get('/', (req, res) => {
             <div class="avatar">💙</div>
             <h1>DinhoZap<br><span>by Dinho</span></h1>
             <div class="online-count" id="onlineCount">0 online</div>
-            <button class="btn-limpar" onclick="abrirModalSenha()" title="Limpar todas as mensagens (requer senha)">🗑️</button>
+            <button class="btn-admin" onclick="abrirModalAdmin()" title="Gerenciar participantes">⚙️</button>
+            <button class="btn-limpar" onclick="abrirModalSenha()" title="Limpar todas as mensagens">🗑️</button>
         </div>
 
-        <!-- Seleção de usuário -->
-        <div class="user-selector" id="userSelector">
-            <div class="user-btn" data-user="dinho" onclick="selecionarUsuario('dinho')">
-                <span class="online-indicator" id="status-dinho"></span>
-                <span>👨 Dinho</span>
-            </div>
-            <div class="user-btn" data-user="gabi" onclick="selecionarUsuario('gabi')">
-                <span class="online-indicator" id="status-gabi"></span>
-                <span>👩 Gabi</span>
-            </div>
-            <div class="user-btn" data-user="amanda" onclick="selecionarUsuario('amanda')">
-                <span class="online-indicator" id="status-amanda"></span>
-                <span>👸 Amanda</span>
-            </div>
-        </div>
+        <!-- Seleção de usuário (dinâmico) -->
+        <div class="user-selector" id="userSelector"></div>
 
         <!-- Chat Area -->
         <div class="chat-area">
@@ -557,7 +621,7 @@ app.get('/', (req, res) => {
                     <div class="grupo-nome">
                         <span>💬 Grupo do Dinho</span>
                     </div>
-                    <div class="participantes" id="participantesText">Ninguém online</div>
+                    <div class="participantes" id="participantesText">Carregando...</div>
                 </div>
                 <div class="digitando" id="digitando"></div>
             </div>
@@ -578,18 +642,69 @@ app.get('/', (req, res) => {
         </div>
     </div>
 
+    <!-- Modal de Admin -->
+    <div class="modal-overlay" id="modalAdmin">
+        <div class="modal">
+            <h3>⚙️ Administração</h3>
+            <p>Digite a senha para gerenciar participantes:</p>
+            <input type="password" id="senhaAdminInput" placeholder="senha admin">
+            <div class="erro-msg" id="erroAdminSenha">Senha incorreta!</div>
+            
+            <div id="adminConteudo" style="display: none;">
+                <hr style="border: 1px solid #2c5282; margin: 15px 0;">
+                
+                <h4>Participantes Atuais:</h4>
+                <div id="listaParticipantes"></div>
+                
+                <hr style="border: 1px solid #2c5282; margin: 15px 0;">
+                
+                <h4>Adicionar Novo Participante:</h4>
+                <input type="text" id="novoNome" placeholder="Nome">
+                <select id="novoEmoji">
+                    <option value="👨">👨 Homem</option>
+                    <option value="👩">👩 Mulher</option>
+                    <option value="👧">👧 Menina</option>
+                    <option value="👦">👦 Menino</option>
+                    <option value="🧑">🧑 Pessoa</option>
+                    <option value="👤">👤 Silhueta</option>
+                </select>
+                
+                <p>Cor:</p>
+                <div class="cores-grid" id="seletorCores">
+                    <div class="cor-opcao" style="background: #4299e1;" onclick="selecionarCor('#4299e1')"></div>
+                    <div class="cor-opcao" style="background: #9f7aea;" onclick="selecionarCor('#9f7aea')"></div>
+                    <div class="cor-opcao" style="background: #f687b3;" onclick="selecionarCor('#f687b3')"></div>
+                    <div class="cor-opcao" style="background: #48bb78;" onclick="selecionarCor('#48bb78')"></div>
+                    <div class="cor-opcao" style="background: #ed8936;" onclick="selecionarCor('#ed8936')"></div>
+                    <div class="cor-opcao" style="background: #f56565;" onclick="selecionarCor('#f56565')"></div>
+                    <div class="cor-opcao" style="background: #38b2ac;" onclick="selecionarCor('#38b2ac')"></div>
+                    <div class="cor-opcao" style="background: #b794f4;" onclick="selecionarCor('#b794f4')"></div>
+                </div>
+                
+                <input type="hidden" id="novaCor" value="#4299e1">
+                
+                <div class="modal-botoes">
+                    <button class="modal-btn confirmar" onclick="adicionarParticipante()">Adicionar</button>
+                </div>
+            </div>
+            
+            <div class="modal-botoes" style="margin-top: 20px;">
+                <button class="modal-btn cancelar" onclick="fecharModalAdmin()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de senha para limpar mensagens -->
     <div class="modal-overlay" id="modalSenha">
         <div class="modal">
-            <h3>🔐 Área Restrita</h3>
+            <h3>🔐 Limpar Conversa</h3>
             <p>Digite a senha para limpar todas as mensagens:</p>
-            <input type="password" id="senhaInput" placeholder="••••••••" maxlength="20">
-            <div class="erro-senha" id="erroSenha">Senha incorreta!</div>
+            <input type="password" id="senhaInput" placeholder="••••••••">
+            <div class="erro-msg" id="erroSenha">Senha incorreta!</div>
             <div class="modal-botoes">
                 <button class="modal-btn cancelar" onclick="fecharModalSenha()">Cancelar</button>
                 <button class="modal-btn confirmar" onclick="verificarSenha()">Limpar</button>
             </div>
-            <div class="senha-hint">💡 Apenas o Dinho sabe a senha</div>
         </div>
     </div>
 
@@ -599,6 +714,8 @@ app.get('/', (req, res) => {
         let meuNome = '';
         let meuContato = '';
         let usuariosOnline = new Map();
+        let participantes = [];
+        let corSelecionada = '#4299e1';
         
         // Elementos
         const mensagensDiv = document.getElementById('mensagens');
@@ -608,29 +725,62 @@ app.get('/', (req, res) => {
         const digitandoSpan = document.getElementById('digitando');
         const onlineCount = document.getElementById('onlineCount');
         const participantesText = document.getElementById('participantesText');
+        const userSelector = document.getElementById('userSelector');
+        
+        // Modais
+        const modalAdmin = document.getElementById('modalAdmin');
         const modalSenha = document.getElementById('modalSenha');
         const senhaInput = document.getElementById('senhaInput');
+        const senhaAdminInput = document.getElementById('senhaAdminInput');
         const erroSenha = document.getElementById('erroSenha');
-        
-        // Cores para cada usuário
-        const cores = {
-            dinho: '#4299e1',
-            gabi: '#9f7aea',
-            amanda: '#f687b3'
-        };
+        const erroAdminSenha = document.getElementById('erroAdminSenha');
+        const adminConteudo = document.getElementById('adminConteudo');
+        const listaParticipantes = document.getElementById('listaParticipantes');
+        const novoNome = document.getElementById('novoNome');
+        const novoEmoji = document.getElementById('novoEmoji');
+        const novaCor = document.getElementById('novaCor');
 
-        // Nomes formatados
-        const nomes = {
-            dinho: 'Dinho',
-            gabi: 'Gabi',
-            amanda: 'Amanda'
-        };
+        // ========== CARREGAR PARTICIPANTES ==========
+        function carregarParticipantes() {
+            fetch('/api/participantes')
+                .then(res => res.json())
+                .then(data => {
+                    participantes = data;
+                    atualizarBotoesUsuario();
+                    participantesText.textContent = participantes.map(p => p.nome).join(', ');
+                });
+        }
+
+        // ========== ATUALIZAR BOTÕES ==========
+        function atualizarBotoesUsuario() {
+            userSelector.innerHTML = '';
+            participantes.forEach(p => {
+                const btn = document.createElement('div');
+                btn.className = 'user-btn';
+                btn.dataset.user = p.id;
+                btn.setAttribute('onclick', \`selecionarUsuario('\${p.id}')\`);
+                
+                const indicator = document.createElement('span');
+                indicator.className = 'online-indicator';
+                indicator.id = \`status-\${p.id}\`;
+                
+                const span = document.createElement('span');
+                span.textContent = \`\${p.emoji} \${p.nome}\`;
+                
+                btn.appendChild(indicator);
+                btn.appendChild(span);
+                userSelector.appendChild(btn);
+            });
+        }
 
         // ========== FUNÇÕES ==========
         function selecionarUsuario(contato) {
             if (!meuContato) {
+                const participante = participantes.find(p => p.id === contato);
+                if (!participante) return;
+                
                 meuContato = contato;
-                meuNome = nomes[contato];
+                meuNome = participante.nome;
                 
                 // Atualizar UI dos botões
                 document.querySelectorAll('.user-btn').forEach(btn => {
@@ -666,34 +816,129 @@ app.get('/', (req, res) => {
                         }
                     });
 
-                setupEventListeners();
-                
                 notificar(\`💙 Você entrou como \${meuNome}\`);
             }
         }
 
-        function setupEventListeners() {
-            btnEnviar.addEventListener('click', enviarMensagem);
+        // Modal Admin
+        function abrirModalAdmin() {
+            modalAdmin.classList.add('ativo');
+            senhaAdminInput.value = '';
+            adminConteudo.style.display = 'none';
+            erroAdminSenha.style.display = 'none';
+        }
+
+        function fecharModalAdmin() {
+            modalAdmin.classList.remove('ativo');
+        }
+
+        function verificarAdminSenha() {
+            const senha = senhaAdminInput.value;
             
-            mensagemInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') enviarMensagem();
-            });
-
-            mensagemInput.addEventListener('input', () => {
-                socket.emit('digitando', { nome: meuNome });
-            });
-
-            senhaInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') verificarSenha();
+            fetch('/api/verificar-senha', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ senha: senha })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.valida) {
+                    adminConteudo.style.display = 'block';
+                    erroAdminSenha.style.display = 'none';
+                    carregarListaParticipantes();
+                } else {
+                    erroAdminSenha.style.display = 'block';
+                }
             });
         }
 
-        // Modal functions
+        function carregarListaParticipantes() {
+            fetch('/api/participantes')
+                .then(res => res.json())
+                .then(data => {
+                    listaParticipantes.innerHTML = '';
+                    data.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'participante-item';
+                        div.innerHTML = \`
+                            <div class="participante-info">
+                                <span class="participante-cor" style="background: \${p.cor}"></span>
+                                <span>\${p.emoji} \${p.nome}</span>
+                            </div>
+                            <button class="btn-remover-participante" onclick="removerParticipante('\${p.id}')">✖</button>
+                        \`;
+                        listaParticipantes.appendChild(div);
+                    });
+                });
+        }
+
+        function selecionarCor(cor) {
+            corSelecionada = cor;
+            novaCor.value = cor;
+            
+            document.querySelectorAll('.cor-opcao').forEach(el => {
+                el.classList.remove('selecionada');
+                if (el.style.background === cor) {
+                    el.classList.add('selecionada');
+                }
+            });
+        }
+
+        function adicionarParticipante() {
+            const nome = novoNome.value.trim();
+            const emoji = novoEmoji.value;
+            
+            if (!nome) {
+                alert('Digite um nome!');
+                return;
+            }
+            
+            fetch('/api/adicionar-participante', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nome: nome,
+                    emoji: emoji,
+                    cor: corSelecionada
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    carregarParticipantes();
+                    carregarListaParticipantes();
+                    novoNome.value = '';
+                    notificar(\`✅ \${nome} adicionado!\`);
+                }
+            });
+        }
+
+        function removerParticipante(id) {
+            if (participantes.length <= 1) {
+                alert('Deve ter pelo menos 1 participante!');
+                return;
+            }
+            
+            fetch('/api/remover-participante', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    carregarParticipantes();
+                    carregarListaParticipantes();
+                    notificar('✅ Participante removido!');
+                }
+            });
+        }
+
+        // Modal Limpar
         function abrirModalSenha() {
             modalSenha.classList.add('ativo');
             senhaInput.value = '';
             erroSenha.style.display = 'none';
-            setTimeout(() => senhaInput.focus(), 300);
         }
 
         function fecharModalSenha() {
@@ -711,36 +956,22 @@ app.get('/', (req, res) => {
             .then(res => res.json())
             .then(data => {
                 if (data.valida) {
-                    // Senha correta - limpar mensagens
                     fetch('/api/limpar', { method: 'POST' })
                         .then(res => res.json())
                         .then(() => {
                             mensagensDiv.innerHTML = '';
                             mensagensDiv.appendChild(emptyState);
-                            notificar('✨ Todas as mensagens foram limpas!');
+                            notificar('✨ Mensagens limpas!');
                             fecharModalSenha();
                         });
                 } else {
-                    // Senha errada
                     erroSenha.style.display = 'block';
-                    senhaInput.style.borderColor = '#fc8181';
                     notificar('❌ Senha incorreta!', true);
                 }
             });
         }
 
         // Socket events
-        socket.on('historico_grupo', (historico) => {
-            mensagensDiv.innerHTML = '';
-            if (historico.length === 0) {
-                mensagensDiv.appendChild(emptyState);
-            } else {
-                historico.forEach(msg => {
-                    adicionarMensagem(msg);
-                });
-            }
-        });
-
         socket.on('nova_mensagem_grupo', (msg) => {
             if (mensagensDiv.contains(emptyState)) {
                 mensagensDiv.innerHTML = '';
@@ -755,14 +986,13 @@ app.get('/', (req, res) => {
         socket.on('mensagens_limpas', () => {
             mensagensDiv.innerHTML = '';
             mensagensDiv.appendChild(emptyState);
-            notificar('🧹 Chat foi limpo por alguém');
         });
 
         socket.on('usuario_online', (usuario) => {
             usuariosOnline.set(usuario.contato, usuario);
             atualizarStatus(usuario.contato, true);
             atualizarContagemOnline();
-            notificar(\`✨ \${usuario.nome} entrou no grupo\`);
+            notificar(\`✨ \${usuario.nome} entrou\`);
         });
 
         socket.on('usuario_offline', (usuario) => {
@@ -776,6 +1006,10 @@ app.get('/', (req, res) => {
                 digitandoSpan.textContent = \`\${dados.nome} está digitando...\`;
                 setTimeout(() => { digitandoSpan.textContent = ''; }, 3000);
             }
+        });
+
+        socket.on('participantes_atualizados', () => {
+            carregarParticipantes();
         });
 
         function enviarMensagem() {
@@ -800,29 +1034,28 @@ app.get('/', (req, res) => {
         }
 
         function adicionarMensagem(msg) {
+            const participante = participantes.find(p => p.id === msg.de);
+            const cor = participante ? participante.cor : '#90cdf4';
+            
             const div = document.createElement('div');
             div.className = \`mensagem \${msg.de === meuContato ? 'minha' : 'outra'}\`;
             
-            // Remetente (se não for minha mensagem)
             if (msg.de !== meuContato) {
                 const remetente = document.createElement('div');
                 remetente.className = 'remetente';
                 remetente.textContent = msg.nome;
-                remetente.style.color = cores[msg.de] || '#90cdf4';
+                remetente.style.color = cor;
                 div.appendChild(remetente);
             }
             
-            // Texto da mensagem
             const texto = document.createElement('div');
             texto.className = 'texto';
             texto.textContent = msg.texto;
             div.appendChild(texto);
             
-            // Footer com hora
             const footer = document.createElement('div');
             footer.className = 'footer';
             footer.textContent = msg.hora || '';
-            if (msg.automatica) footer.textContent += ' 🤖';
             div.appendChild(footer);
             
             mensagensDiv.appendChild(div);
@@ -839,15 +1072,6 @@ app.get('/', (req, res) => {
         function atualizarContagemOnline() {
             const count = usuariosOnline.size;
             onlineCount.textContent = \`\${count} online\`;
-            
-            if (count === 0) {
-                participantesText.textContent = 'Ninguém online';
-            } else {
-                const nomesOnline = Array.from(usuariosOnline.values())
-                    .map(u => u.nome)
-                    .join(', ');
-                participantesText.textContent = nomesOnline;
-            }
         }
 
         function notificar(texto, erro = false) {
@@ -858,14 +1082,78 @@ app.get('/', (req, res) => {
             setTimeout(() => notif.remove(), 3000);
         }
 
+        // Event Listeners
+        senhaAdminInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verificarAdminSenha();
+        });
+
+        senhaInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verificarSenha();
+        });
+
+        btnEnviar.addEventListener('click', enviarMensagem);
+        mensagemInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') enviarMensagem();
+        });
+        mensagemInput.addEventListener('input', () => {
+            if (meuNome) {
+                socket.emit('digitando', { nome: meuNome });
+            }
+        });
+
+        // Inicializar
+        carregarParticipantes();
+
         // Tornar funções globais
         window.selecionarUsuario = selecionarUsuario;
+        window.abrirModalAdmin = abrirModalAdmin;
+        window.fecharModalAdmin = fecharModalAdmin;
+        window.verificarAdminSenha = verificarAdminSenha;
         window.abrirModalSenha = abrirModalSenha;
         window.fecharModalSenha = fecharModalSenha;
         window.verificarSenha = verificarSenha;
+        window.adicionarParticipante = adicionarParticipante;
+        window.removerParticipante = removerParticipante;
+        window.selecionarCor = selecionarCor;
     </script>
 </body>
 </html>`);
+});
+
+// API Participantes
+app.get('/api/participantes', (req, res) => {
+    res.json(participantes);
+});
+
+// API Adicionar participante
+app.post('/api/adicionar-participante', (req, res) => {
+    const { nome, emoji, cor } = req.body;
+    
+    const novoParticipante = {
+        id: nome.toLowerCase().replace(/\s/g, '') + Date.now(),
+        nome: nome,
+        emoji: emoji || '👤',
+        cor: cor || '#4299e1'
+    };
+    
+    participantes.push(novoParticipante);
+    io.emit('participantes_atualizados');
+    
+    res.json({ success: true, participante: novoParticipante });
+});
+
+// API Remover participante
+app.post('/api/remover-participante', (req, res) => {
+    const { id } = req.body;
+    
+    if (participantes.length <= 1) {
+        return res.json({ success: false, error: 'Deve ter pelo menos 1 participante' });
+    }
+    
+    participantes = participantes.filter(p => p.id !== id);
+    io.emit('participantes_atualizados');
+    
+    res.json({ success: true });
 });
 
 // API Status
@@ -885,14 +1173,14 @@ app.get('/api/historico', (req, res) => {
 // API Verificar senha
 app.post('/api/verificar-senha', (req, res) => {
     const { senha } = req.body;
-    res.json({ valida: senha === SENHA_LIMPAR });
+    res.json({ valida: senha === SENHA_ADMIN });
 });
 
 // API Limpar mensagens
 app.post('/api/limpar', (req, res) => {
     historicoGrupo = [];
     io.emit('mensagens_limpas');
-    res.json({ success: true, message: 'Histórico limpo!' });
+    res.json({ success: true });
 });
 
 // Socket.IO
@@ -947,14 +1235,10 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(50));
-    console.log('💙 DINHOZAP - DINHO, GABI & AMANDA 💙');
+    console.log('💙 DINHOZAP - COM PAINEL ADMIN 💙');
     console.log('='.repeat(50));
     console.log(`📱 Porta: ${PORT}`);
-    console.log(`👥 Contatos: Dinho, Gabi e Amanda`);
-    console.log(`🎨 Cores:`);
-    console.log(`   • Dinho: Azul (#4299e1)`);
-    console.log(`   • Gabi: Roxo (#9f7aea)`);
-    console.log(`   • Amanda: Rosa (#f687b3)`);
-    console.log(`🔐 Senha: dinho123456`);
+    console.log(`🔐 Senha Admin: dinho123456`);
+    console.log(`👥 Gerencie participantes pelo botão ⚙️`);
     console.log('='.repeat(50) + '\n');
 });
