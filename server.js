@@ -1,35 +1,4 @@
-// ========== DINHOZAP - COM PAINEL DE ADMIN ==========
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const path = require('path');
 
-const app = express();
-const server = http.createServer(app);
-const io = socketIo(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-});
-
-const PORT = process.env.PORT || 3000;
-const usuarios = new Map();
-let historicoGrupo = [];
-
-// Configuração inicial de participantes
-let participantes = [
-    { id: 'dinho', nome: 'Dinho', emoji: '👨', cor: '#4299e1' },
-    { id: 'gabi', nome: 'Gabi', emoji: '👩', cor: '#9f7aea' },
-    { id: 'amanda', nome: 'Amanda', emoji: '👸', cor: '#f687b3' }
-];
-
-// Senha para limpar conversas e acessar admin
-const SENHA_ADMIN = "dinho123456";
-
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Rota principal
-app.get('/', (req, res) => {
-    res.send(`<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -1242,3 +1211,4 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`👥 Gerencie participantes pelo botão ⚙️`);
     console.log('='.repeat(50) + '\n');
 });
+
